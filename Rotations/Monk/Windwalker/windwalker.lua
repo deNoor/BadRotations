@@ -1420,10 +1420,7 @@ local function runRotation()
     --   cast8yards("spinningCraneKick"," sck st proc sef")
     -- end
     cast5yards("chiWave", "ST chiWave")
-
-    if IsUsableSpell(spell.chiBurst) then
-      ChiBurstBestRect()
-    end
+    cast5yards("chiBurst", "ST chiBurst")
     
     
 
