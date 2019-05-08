@@ -6,8 +6,8 @@ monkTables.enemyTable5,
   monkTables.enemyTable8,
   monkTables.enemyTable20,
   monkTables.burnTable5,
-  monkTables.moclist5,
-  monkTables.foftable = {}, {}, {}, {}, {}, {}
+  monkTables.moclist5
+   = {}, {}, {}, {}, {}
 local enemyTable5,
   enemyTable8,
   enemyTable20,
@@ -431,7 +431,7 @@ local function runRotation()
   local use = br.player.use
 
   local spread = false
-  if GetKeyState(16) then
+  if GetKeyState(0x10) then
     spread = true
   end
   local fotwtcd = cd.fistOfTheWhiteTiger.remain()
@@ -442,6 +442,7 @@ local function runRotation()
   local sefcd = cd.stormEarthAndFire.remain()
   local sckcast = 1.5 / (1 + (GetHaste()/100))
   local fofcast = 4 / (1 + (GetHaste()/100))
+  local fixing = false
     -- print(sckcast)
   -- units.get(5)
   -- enemies.get(5)
@@ -471,38 +472,32 @@ local function runRotation()
     opener = false
   end
 
-  function getTimeTo50(Unit)
-    local max = 50
-    local curr = UnitPower(Unit)
-    local curr2 = curr
-    local _, regen = GetPowerRegen(Unit)
-    if select(3, UnitClass("player")) == 11 and GetSpecialization() == 2 and isKnown(114107) then
-      curr2 = curr + 4 * getCombo()
-    end
-    if curr >= 50 then return 0 end
-    return (max - curr2) * (1.0 / regen)
+  function getTimeTo(number)
+    if power >= number then return 0 end
+    return (number - power) * (1.0 / powerRegen)
   end
 
   function EnergyRemainingCastRegen()
     -- If we are casting, we check what we will regen until the end of the cast
     if UnitCastingInfo("player") then 
-      return powerRegen * (select(5, UnitCastingInfo("player")) - GetTime())
+      return powerRegen * (select(5, UnitCastingInfo("player"))/1000 - GetTime())
     elseif UnitChannelInfo("player") then
-      return powerRegen * (select(5, UnitChannelInfo("player")) - GetTime())
+      return powerRegen * (select(5, UnitChannelInfo("player"))/1000 - GetTime())
     else
       return powerRegen * gcd 
     end
   end
 
   -- Predict the expected Energy at the end of the Cast/GCD.
-  function EnergyP()
+  function EnergyP(time)
+    if time ~= nil then return math.min(powerMax, power + time*powerRegen) end
     return math.min(powerMax, power + EnergyRemainingCastRegen())
   end
 
   function EnergyDeficitPredicted()
     return math.max(0, powerDeficit - EnergyRemainingCastRegen())
-end
-
+  end
+  -- print(EnergyDeficitPredicted())
   function ttmP(energy)
     local EnergyDeficitPredicted = EnergyDeficitPredicted()
     if energy ~= nil then
@@ -514,32 +509,76 @@ end
     return EnergyDeficitPredicted / powerRegen
   end
 
-  local function cangetchitp(time)
+  local function cangetchitp(skill)
+    -- if (fofcd <= 1 or rskcd <= 1) then return false end
     -- if time == nil then return end
-    local time = math.floor(time)
-    local total = EnergyP() 
+    -- if fofcd >= 10 and rskcd >= 5 then 
+    --   return true
+    -- end
+    -- local checkforchi
+    local cdcheck 
+    if skill == "rsk" then
+      cdcheck = math.floor(rskcd)
+    elseif skill == "fof" then
+      cdcheck = math.floor(fofcd)
+    end
+
+    -- if rskcd > fofcd then
+    --   cdcheck = math.floor(fofcd)
+    --   checkforchi = 3
+    -- else
+    --   cdcheck = math.floor(rskcd)
+    --   checkforchi = 2
+    -- end
+    -- local cdcheck = math.floor(math.min(rskcd,fofcd))
+
+    local blackoutfree = buff.blackoutKick.exists("player") and true or false
+
     local chigot = chi
     local checktime = 0
-    local last = false
-    -- if lastCombo == "tigerPalm" then
-    --   last = true
-    -- end
-    while checktime < time do
-      if total >= 50 and not last then
+    local total = EnergyP() --+ checktime * powerRegen
+    -- local rskcd = rskcd - checktime
+    local last = lastcombo
+    local fotwtinit = fotwtcd
+    while checktime < cdcheck do
+      local chiDefcheck = chiMax - chigot
+      local fotwtcdcheck = fotwtinit - checktime
+      if fotwtcdcheck <= 0 and total >= 40 and chiDefcheck >= 3 then
+        total = total - 40
+        chigot = chigot + 3
+        fotwtcdcheck = fotwtcdcheck + 500
+        last = "fotwt"
+      elseif total >= 50 and last ~= "tigerPalm" and chiDefcheck >= 2 then
         total = total - 50
         chigot = chigot + 2
-        last = true
+        last = "tigerPalm"
       else
-        if chigot >= 1 and last then
-          chigot = chigot - 1
-          last = false
+        if (chigot >= 1 or blackoutfree) and last ~= "blackoutKick"  then
+          if blackoutfree then
+            blackoutfree = false
+          else
+            chigot = chigot - 1
+          end
+          last = "blackoutKick"
         end
       end
       total = total + powerRegen
       checktime = checktime + 1
     end
-    return chigot 
+    if skill == "rsk" and chigot > 2 then
+      -- print("rsk good")
+      return true
+    elseif skill == "fof" and chigot > 3 then
+
+      -- print("fof good")
+      return true
+    end
+
+    -- print("dont kick")
+    return false
   end
+
+  
   
   -- print(ttmP(50))
   -- print(getTimeTo50("player")) 
@@ -811,7 +850,7 @@ end
         if ((x - dx) * dax + (y - dy) * day >= 0.0) then return false end
         return true
     end
-    if moving or isTotem("target") or GetObjectID("target") == 120651 then return end
+    if moving or isTotem("target") or GetObjectID("target") == 120651 or spread then return end
 
     if not isKnown(123986) or getSpellCD(123986) ~= 0 then
       return false
@@ -840,10 +879,11 @@ end
       facing = facing + 0.05
     end
       -- print(bestAngleUnitsHit .. "      " ..bestAngle)
-      if bestAngleUnitsHit >= 1 then
+      if (chiDeficit >= 1 and bestAngleUnitsHit == 1) or (chiDeficit >= 2 and bestAngleUnitsHit >= 2) then
         FaceDirection(bestAngle, true)
         CastSpellByName(GetSpellInfo(123986))
         FaceDirection(curFacing)
+        if isChecked("Debug") then print("ChiBurst hits " ..bestAngleUnitsHit) end
         return true
       else
         return false
@@ -1309,6 +1349,7 @@ end
   end
   -- Action List - Single Target
   local function actionList_SingleTarget()
+    -- cangetchitp()
     if talent.whirlingDragonPunch and IsUsableSpell(spell.whirlingDragonPunch) and (isChecked("WDP when moving") or not moving) then
       cast8yards("whirlingDragonPunch", "ST WDP")
     end
@@ -1316,9 +1357,9 @@ end
       cast5yards("risingSunKick", "ST RSK chi >=5")
     end
 
-    if ttmP() >= fofcast --or lastcombo == "tigerPalm" or (cd.whirlingDragonPunch.remain() <= 1 and debuff.touchOfDeath.exists("target") and not isChecked("WDP abuse")) 
+    if IsUsableSpell(spell.fistsOfFury) and ttmP() >= fofcast --or lastcombo == "tigerPalm" or (cd.whirlingDragonPunch.remain() <= 1 and debuff.touchOfDeath.exists("target") and not isChecked("WDP abuse")) 
       then
-      smartfof("st")
+        smartfof("st")
     end
 
     -- if isChecked("BlackoutKick execute") and not lastcombo == "blackoutKick" and IsUsableSpell(spell.blackoutKick) then
@@ -1333,52 +1374,85 @@ end
     --     end
     --   end
     -- end
-    if fofcd >= 2 or (EnergyP() >= 50 and lastcombo ~= "tigerPalm") then
+    -- if fofcd >= 2 or (EnergyP() >= 50 and lastcombo ~= "tigerPalm") then
       cast5yards("risingSunKick", "ST RSK")
-    end
+    -- end
+
 
     
+    if lastcombo ~= "blackoutKick" then
+      if rskcd > 1 and fofcd >= 7 and chi >= 3 then
+        cast5yards("blackoutKick", "ST blackoutKick reduce cds 1")
+      elseif fofcd >= 1 and chi >= 4 then
+        cast5yards("blackoutKick", "ST blackoutKick reduce cds 2")
+      elseif rskcd >= getTimeTo(50) + 2 and fofcd >= getTimeTo(50) + 4 then
+        cast5yards("blackoutKick", "ST blackoutKick reduce cds 3")
+      elseif chi == 2 and fofcd <= rskcd and fofcd then
+        cast5yards("blackoutKick", "ST blackoutKick reduce cds 4")
+      elseif rskcd >= 1 and fofcd >= 1 and lastcombo == "tigerPalm" and buff.blackoutKick.exists() then
+        cast5yards("blackoutKick", "ST blackoutKick reduce cds 5")
+      elseif fofcd + fofcast <= ttmP() and lastcombo == "tigerPalm" then
+        cast5yards("blackoutKick", "ST blackoutKick reduce cds 6")
+      end
 
-    
-
-    if IsUsableSpell(spell.fistOfTheWhiteTiger) and chi <= 2 then
-      cast5yards("fistOfTheWhiteTiger", "ST FotWT chi <= 2")
+        -- ((rskcd > 1 and fofcd >= 7 and chi >= 3) or (fofcd >= 1 and chi >= 4) or (rskcd >= getTimeTo(50) + 2 and fofcd >= getTimeTo(50) + 2)) then
+      -- cast5yards("blackoutKick", "ST blackoutKick reduce cds")
     end
+    
 
     -- if buff.danceOfChiJi.exists("player") and lastcombo ~= "spinningCraneKick"  then
     --   cast8yards("spinningCraneKick"," sck st proc no sef")
     -- end
 
-    if buff.danceOfChiJi.exists("player") and lastcombo ~= "spinningCraneKick"  then
-      if chiDeficit >= 2 and lastcombo ~= "tigerPalm" and (not buff.rushingJadeWind.exists() or EnergyP() > 56) then
+    if buff.danceOfChiJi.exists("player") and lastcombo ~= "spinningCraneKick" and ttmP() > sckcast and ((fofcd >= sckcast and rskcd >= sckcast) or chi <= 2 and getTimeTo(50) >= 1 ) then
+      if chiDeficit >= 2 and lastcombo ~= "tigerPalm" and ttmP() <= sckcast then
         cast5yards("tigerPalm", "ST tigerPalm chiDeficit >= 2 before Dance")
       end 
       cast8yards("spinningCraneKick","ST ScK Dance")
     end
 
-    if lastcombo ~= "blackoutKick" and (buff.blackoutKick.exists() or (cangetchitp(rskcd) >= 2 and fofcd >= rskcd + 2) or cangetchitp(fofcd) >= 3) then
-      cast5yards("blackoutKick", "ST BlackoutKick")
-    end
+
+    -- if lastcombo ~= "tigerPalm" and ((cangetchitp("fof") and fofcd <= 4) and (rskcd <=2 and cangetchitp("rsk"))) and IsUsableSpell(spell.tigerPalm) then
+    --   cast5yards("tigerPalm", "ST cangetc")
+    -- end
     --danceOfChiJi + SEF
     -- if buff.danceOfChiJi.exists("player") and lastcombo ~= "spinningCraneKick" and ttm >= sckcast then
     --   cast8yards("spinningCraneKick"," sck st proc sef")
     -- end
     cast5yards("chiWave", "ST chiWave")
-    if chiDeficit >= 1 then
+
+    if IsUsableSpell(spell.chiBurst) then
       ChiBurstBestRect()
+    end
+    
+    
+
+    -- if lastcombo ~= "blackoutKick" 
+    --   and ttmP() < 2 and chiDeficit < 2
+    --   then
+    --   cast5yards("blackoutKick", "ST BlackoutKick Fix")
+    -- end
+        if fofcd <= 4 and ttmP() <= fofcd + fofcast and cangetchitp("fof") and fofcd <= rskcd then
+      if lastcombo ~= "blackoutKick" then
+        cast5yards("blackoutKick", "ST blackoutKick prepare fof")
+      -- elseif lastcombo ~= "tigerPalm" then
+      --   cast5yards("tigerPalm", "ST tigerPalm prepare fof")
+      end
+    end
+
+    if rskcd <= 4 and ttmP() <= rskcd + 1 and cangetchitp("rsk") then
+      if lastcombo ~= "blackoutKick" then
+        cast5yards("blackoutKick", "ST blackoutKick prepare rsk")
+      -- elseif lastcombo ~= "tigerPalm" then
+      --   cast5yards("tigerPalm", "ST tigerPalm prepare rsk")
+      end
+    end
+    if IsUsableSpell(spell.fistOfTheWhiteTiger) and chi <= 2 then
+      cast5yards("fistOfTheWhiteTiger", "ST FotWT chi <= 2")
     end
     if chiDeficit >= 2 and lastcombo ~= "tigerPalm" and (not buff.rushingJadeWind.exists() or EnergyP() > 56) then
       cast5yards("tigerPalm", "ST tigerPalm chiDeficit >= 2")
     end
-    
-
-    if lastcombo ~= "blackoutKick" 
-      and ttmP() < 2 and chiDeficit < 2
-      then
-      cast5yards("blackoutKick", "ST BlackoutKick Fix")
-    end
-    
-
     --flying_serpent_kick,if=prev_gcd.1.blackout_kick&chi>3&buff.swift_roundhouse.stack<2,interrupt=1
     if mode.fsk == 1 and lastcombo ~= "blackoutKick" and chi > 3 and buff.swiftRoundhouse.stack() < 2 then
       if cast.flyingSerpentKick() then
@@ -1389,7 +1463,7 @@ end
       end
     end
 
-    smartfof("st")
+    -- smartfof("st")
 
     --     if not wasLastCombo(spell.tigerPalm)
     --         and chi < 4 and ttm <= gcd
@@ -1528,8 +1602,9 @@ end
      cast5yards("blackoutKick", "blackoutKick AOE")
     end
     -- -- Tiger Palm - Stall Prevention
-    if not lastcombo ~= "tigerPalm" and energy > 50 then
+    if not lastcombo ~= "tigerPalm" and EnergyP() >= 50 then
       if cast.tigerPalm(moclist5[1].unit) then
+        print("123333333333333333")
         if isChecked("Debug") then
           print("tp stall")
         end
@@ -1538,17 +1613,13 @@ end
     end
   end -- End Action List - AoE
   local function fixing()
-    if ttmP() <= cd.fistsOfFury.remain() and chi >= 4 then
-      for i = 1, #enemyTable5 do
-        local thisUnit = enemyTable5[i].unit
-        if cast.tigerPalm(thisUnit) then
-          if isChecked("Debug") then
-            print("tp fix")
-          end
-          return true
+      if ttmP() <= fofcd + fofcast and ttmP() <= rskcd + 1 then
+        if lastcombo ~= "blackoutKick" then
+          cast5yards("blackoutKick","bkick fix fof")
+        elseif lastcombo ~= "tigerPalm"  then
+          cast5yards("tigerPalm","tigerPalm fix fof")
         end
       end
-    end
   end
   -- Action List - Serenity
   local function actionList_Serenity()
@@ -1703,11 +1774,11 @@ end
       --     if cast.invokeXuenTheWhiteTiger() then return true end
       -- end
       -- print(lastcombo)
-      if IsUsableSpell(spell.fistOfTheWhiteTiger) and chiDeficit >= 3 and ttmP() < 1  then
+      if IsUsableSpell(spell.fistOfTheWhiteTiger) and chiDeficit >= 3 and ttmP() < 1.2  then
         cast5yards("fistOfTheWhiteTiger", "fotwt general")
       end
 
-      if IsUsableSpell(spell.tigerPalm) and chiDeficit >= 2 and lastcombo ~= "tigerPalm" and ttmP() < 1 then
+      if IsUsableSpell(spell.tigerPalm) and chiDeficit >= 2 and lastcombo ~= "tigerPalm" and ttmP() < 1.2 then
         cast5yards("tigerPalm", "tp general")
       end
       -- Call Action List - Cooldowns
@@ -1718,7 +1789,7 @@ end
         end
       end
 
-      if #enemyTable5 >= 3 and mode.cleave < 3 and #burnlist5 == 0 then
+      if #enemyTable5 >= 3 and mode.cleave < 3 and #burnTable5 == 0 then
         if actionList_AoE() then
           return true
         end
@@ -1731,9 +1802,7 @@ end
       -- Call Action List - AoE
       -- call_action_list,name=aoe,if=active_enemies>=3
 
-      if fixing() then
-        return true
-      end
+      fixing() 
     end -- End Combat Check
   end -- End Pause
   --end -- End Timer
