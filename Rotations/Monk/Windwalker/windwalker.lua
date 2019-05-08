@@ -1420,7 +1420,9 @@ local function runRotation()
     --   cast8yards("spinningCraneKick"," sck st proc sef")
     -- end
     cast5yards("chiWave", "ST chiWave")
-    cast5yards("chiBurst", "ST chiBurst")
+    if chi < 5 then
+      cast5yards("chiBurst", "ST chiBurst")
+    end
     
     
 
@@ -1548,8 +1550,11 @@ local function runRotation()
 
     -- Chi Burst
     -- chi_burst,if=chi<=3
+    -- if chi < 5 then
+    --   ChiBurstBestRect()
+    -- end
     if chi < 5 then
-      ChiBurstBestRect()
+      cast5yards("chiBurst", "ST chiBurst")
     end
     if buff.danceOfChiJi.exists("player") and lastcombo ~= "spinningCraneKick" then
        cast8yards("spinningCraneKick", "AOE spinningCraneKick Dance Proc")
