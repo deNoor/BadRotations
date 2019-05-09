@@ -126,6 +126,7 @@ local function createOptions()
     br.ui:createCheckbox(section, "Debug", "Debug")
     br.ui:createCheckbox(section, "BlackoutKick execute", "BlackoutKick execute")
     br.ui:createCheckbox(section, "ToD PVP", "ToD PVP")
+    br.ui:createCheckbox(section, "ChiBurst AutoTarget")
     br.ui:createCheckbox(section, "WDP abuse", "WDP abuse")
     br.ui:createCheckbox(section, "WDP when moving", "WDP when moving")
 
@@ -851,6 +852,10 @@ local function runRotation()
         return true
     end
     if moving or isTotem("target") or GetObjectID("target") == 120651 or spread then return end
+    if not isChecked("ChiBurst AutoTarget") then 
+      CastSpellByName(GetSpellInfo(123986))
+      return true 
+    end
 
     if not isKnown(123986) or getSpellCD(123986) ~= 0 then
       return false
@@ -1420,8 +1425,9 @@ local function runRotation()
     --   cast8yards("spinningCraneKick"," sck st proc sef")
     -- end
     cast5yards("chiWave", "ST chiWave")
-    if chi < 5 then
-      cast5yards("chiBurst", "ST chiBurst")
+
+    if IsUsableSpell(spell.chiBurst) and chiDeficit >= 1 then
+      ChiBurstBestRect()
     end
     
     
@@ -1550,11 +1556,8 @@ local function runRotation()
 
     -- Chi Burst
     -- chi_burst,if=chi<=3
-    -- if chi < 5 then
-    --   ChiBurstBestRect()
-    -- end
     if chi < 5 then
-      cast5yards("chiBurst", "ST chiBurst")
+      ChiBurstBestRect()
     end
     if buff.danceOfChiJi.exists("player") and lastcombo ~= "spinningCraneKick" then
        cast8yards("spinningCraneKick", "AOE spinningCraneKick Dance Proc")
