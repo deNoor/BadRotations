@@ -15,6 +15,7 @@ local enemyTable5,
   moclist5,
   foftable = monkTables.enemyTable5, monkTables.enemyTable8, monkTables.enemyTable20, monkTables.burnTable5, monkTables.moclist5, monkTables.foftable
 
+
 -------- TODO
 --wdp abuse
 --hitcombo
@@ -276,6 +277,7 @@ f:SetScript(
       local source = select(1, ...)
       local spell = select(3, ...)
       if source == "player" then
+        gcdTime = br.time + 0.8
         if spell == 100780 then
           lastcombo = "tigerPalm"
         elseif spell == 261947 then
@@ -379,6 +381,26 @@ f:SetScript(
 --- ROTATION ---
 ----------------
 local function runRotation()
+
+
+    -- local gcdSpell
+     
+    -- local _, _, offset, numSpells = GetSpellTabInfo(2)
+    -- for i = 1, offset + numSpells do
+    --      local slotType, slotID = GetSpellBookItemInfo(i, "spell")
+    --      if slotType == "SPELL" then
+    --           local slotName = GetSpellBookItemName(i, "spell")
+    --           local spellName, _, _, _, _, _, spellID = GetSpellInfo(slotName)
+    --           local spellCD = GetSpellBaseCooldown(spellID or 0) -- spellID can be nil during loading
+    --           if spellCD == 0 then
+    --                gcdSpell = spellID
+    --                break
+    --           end
+    --      end
+    -- end
+     
+    -- local start, duration = GetSpellCooldown(gcdSpell)
+    -- print(gcdSpell)
   --if br.timer:useTimer("debugWindwalker", math.random(0.15,0.3)) then
   --Print("Running: "..rotationName)
   ---------------
@@ -409,7 +431,13 @@ local function runRotation()
   local enemies = br.player.enemies
   local energy = br.player.power.energy.amount()
   local equiped = br.player.equiped
-  local gcd = getSpellCD(61304)  
+  local gcd 
+  if gcdTime == nil or br.time >= gcdTime then
+    gcd = getSpellCD(61304)
+  else
+    gcd = 1
+  end
+  -- print(gcd)
   local has = br.player.has
   local healthPot = getHealthPot() or 0
   local inCombat = br.player.inCombat
@@ -825,7 +853,7 @@ local function runRotation()
 
   local function ChiBurstBestRect()
     local function getRectUnit(facing)
-      width = 7
+      width = 12
       length = 40
       local x, y, z = ObjectPosition("player")
       local facing = facing or 0
@@ -854,7 +882,7 @@ local function runRotation()
     if moving or isTotem("target") or GetObjectID("target") == 120651 or spread then return end
     if not isChecked("ChiBurst AutoTarget") then 
       CastSpellByName(GetSpellInfo(123986))
-      return true 
+      return true
     end
 
     if not isKnown(123986) or getSpellCD(123986) ~= 0 then
@@ -862,18 +890,20 @@ local function runRotation()
     end
     local curFacing = ObjectFacing("player")
     local x, y, z = ObjectPosition("player")
-   
+    
     local facing, bestAngle, bestAngleUnitsHit = 0.1, 0, 0
     while facing <= 6.2 do
+      
       local unitsInRect = 0
       local nlX, nlY, nrX, nrY, frX, frY, flX, flY, flZ, nlZ, nrZ, frZ = getRectUnit(facing)
       for i = 1, #enemies.yards40nc do
         local uX, uY, uZ = ObjectPosition(enemies.yards40nc[i])
         if isInside(uX,uY,nlX,nlY,nrX,nrY,frX,frY) then
-          if UnitAffectingCombat(enemies.yards40nc[i]) and TraceLine(x, y, z, uX, uY, uZ , 0x100111) then
-            unitsInRect = 0
-            break
-          end
+          -- if not UnitAffectingCombat(enemies.yards40nc[i]) and TraceLine(x, y, z, uX, uY, uZ , 0x10) then
+          --   unitsInRect = 0
+          --   facing = facing + 0.05
+          --   break
+          -- end
           unitsInRect = unitsInRect + 1
         end
       end
@@ -885,13 +915,18 @@ local function runRotation()
     end
       -- print(bestAngleUnitsHit .. "      " ..bestAngle)
       if (chiDeficit >= 1 and bestAngleUnitsHit == 1) or (chiDeficit >= 2 and bestAngleUnitsHit >= 2) then
-        FaceDirection(bestAngle, true)
-        CastSpellByName(GetSpellInfo(123986))
-        FaceDirection(curFacing)
+        -- local nlX, nlY, nrX, nrY, frX, frY, flX, flY, flZ, nlZ, nrZ, frZ = getRectUnit(bestAngle)
+        -- LibDraw.clearCanvas()
+        -- LibDraw.Line(flX, flY, z, nlX, nlY, z)
+        -- LibDraw.Line(frX, frY, z, nrX, nrY, z)
+        -- LibDraw.Line(frX, frY, z, flX, flY, z)
+        -- LibDraw.Line(nlX, nlY, z, nrX, nrY, z)
+        -- print(bestAngleUnitsHit)
+          FaceDirection(bestAngle, true)
+          CastSpellByName(GetSpellInfo(123986))
+          FaceDirection(curFacing)
         if isChecked("Debug") then print("ChiBurst hits " ..bestAngleUnitsHit) end
         return true
-      else
-        return false
       end
   end
   ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- stolen from mr daddy fisker
@@ -1010,7 +1045,7 @@ local function runRotation()
     end
     -- Dummy Test
     -- Crackling Jade Lightning
-    -- if isChecked("CJL OOR") and (lastCombo ~= spell.cracklingJadeLightning or buff.hitCombo.stack() <= 1) and #enemies.yards8 == 0 and not isCastingSpell(spell.cracklingJadeLightning) and (hasThreat("target") or isDummy()) and not moving and power >= getOptionValue("CJL OOR") then
+    -- if isChecked("CJL OOR") and (lastcombo ~= spell.cracklingJadeLightning or buff.hitCombo.stack() <= 1) and #enemies.yards8 == 0 and not isCastingSpell(spell.cracklingJadeLightning) and (hasThreat("target") or isDummy()) and not moving and power >= getOptionValue("CJL OOR") then
     --     if cast.cracklingJadeLightning() then return true end
     --  end
     -- Touch of the Void
@@ -1254,45 +1289,60 @@ local function runRotation()
   local function actionList_Open()
     --if (opener == false and time < 1) and (isDummy("target") or isBoss("target")) and (cd.vanish > 0 or not buff.shadowBlades.exists()) then Print("Opener failed due do cds"); opener = true end
     if talent.whirlingDragonPunch then
-      if cast.invokeXuenTheWhiteTiger("target") then  end
+      if cast.invokeXuenTheWhiteTiger("target") then end
       if not open1 then
         if cast.fistOfTheWhiteTiger("target") then
+          print("ftwt")
           open1 = true
+          return true
         end
-      elseif open1 and not open2
+      elseif open1 and not open2 and lastcombo == "fistOfTheWhiteTiger"
        then
         if cast.tigerPalm("target") then
+          print("tp")
           open2 = true
+          return true
         end
-      elseif open2 and not open3 then
-        if cast.able.touchOfDeath("target") then
+      elseif open2 and not open3 and lastcombo == "tigerPalm" then
+        if gcd <= 0.1 then
           if canUse(13) then
             useItem(13)
           end
           if canUse(14) then
             useItem(14)
           end
+        end
+          print("Trinkets")
         if cast.touchOfDeath("target") then
-          open3 = true
+          open3 = true;print("tod")
+          return true
         end
-        end
-      elseif open3 and not open4 then
-        if cast.stormEarthAndFire("target") then
+      elseif open3 and not open4 and lastcombo == "touchOfDeath" then
+        if cast.stormEarthAndFire("player") then
           open4 = true
+          return true
         end
-      elseif open4 and not open5 then
+      elseif open4 and not open5 and lastcombo ~= "risingSunKick"then
         if cast.risingSunKick("target") then
           open5 = true
+          return true
         end
-      elseif open5 and not open6 then
-        if cast.fistsOfFury("target") then
+      elseif open5 and not open6 and lastcombo == "risingSunKick"then
+        if cast.tigerPalm("target") then
           open6 = true
+          return true
         end
-      elseif open6 and not open7 then
-        if cast.whirlingDragonPunch("target") then
+      elseif open6 and not open7 and lastcombo == "tigerPalm" then
+        if cast.fistsOfFury("target") then
           open7 = true
+          return true
         end
-      elseif open7 then
+      elseif open7 and not open8 and lastcombo == "fistsOfFury" then
+        if cast.whirlingDragonPunch("target") then
+          open8  = true
+          return true
+        end
+      elseif open8 then
         Print("Opener Complete")
         opener = true
         toggle("Opener", 2)
@@ -1658,12 +1708,16 @@ local function runRotation()
     if not inCombat then
     end -- End No Combat Check
   end --End Action List - Pre-Combat
+
+  -- ChiBurstBestRect()
   ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   --- Begin Profile ------ Begin Profile ------ Begin Profile ------ Begin Profile ------ Begin Profile ------ Begin Profile ------ Begin Profile ------ Begin Profile ------ Begin Profile ------ Begin Profile ------ Begin Profile ---
   ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   if UnitCastingInfo("player") or UnitChannelInfo("player") then
     return true
   end
+
+  -- ChiBurstBestRect()
 
   -- print(UnitCastingInfo("player"))
   if actionList_PreCombat() then
@@ -1741,14 +1795,11 @@ local function runRotation()
         end
       end
 
-      if mode.opener == 1 then 
-        if inCombat then
+      if mode.opener == 1 and gcd <= 0.1 then 
           if actionList_Open() then return true end
-        else
-          return true 
-        end
       end
-
+      if mode.opener == 1 then return true end
+      -- print("huy")
       --print(lastcombo)
       -- if #burnlist5 > 0 then
       --     if burnexplosive() then return end
