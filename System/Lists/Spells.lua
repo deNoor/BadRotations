@@ -2518,6 +2518,7 @@ br.lists.spells = {
                 stormTotem                  = 210652,
                 surgeOfPower                = 285514,
                 tailwindTotem               = 210659,
+                tectonicThunder             = 286949,
                 windGust                    = 263806,
             },
             debuffs                         = {
@@ -2554,6 +2555,7 @@ br.lists.spells = {
             },
             traits                          = {
                 naturalHarmony              = 278697,
+                tectonicThunder             = 286949,
             },
         },
         -- Enhancement
