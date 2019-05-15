@@ -88,7 +88,7 @@ local function createOptions()
             -- br.ui:createCheckbox(section, "Opener")
             -- br.ui:createCheckbox(section, "RTB Prepull")
             br.ui:createDropdown(section, "Stealth", {"|cff00FF00Always", "|cffFF000020Yards"},  2, "Stealthing method.")
-
+            br.ui:createDropdown(section, "Auto Tricks", {"|cff00FF00Focus", "|cffFF0000Tank"},  1, "Tricks of the Trade target." )
         br.ui:checkSectionState(section)
         ------------------------
         --- OFFENSIVE OPTIONS ---
@@ -288,6 +288,21 @@ local function runRotation()
             if unitType == types[i] then return true end
         end
         return false
+    end
+    
+    local tricksUnit
+    if isChecked("Auto Tricks") and GetSpellCooldown(spell.tricksOfTheTrade) == 0 and inCombat then
+        if getOptionValue("Auto Tricks") == 1 and GetUnitIsFriend("player", "focus") and getLineOfSight("player", "focus") then
+            tricksUnit = "focus"
+        elseif getOptionValue("Auto Tricks") == 2 then
+            for i = 1, #br.friend do
+                local thisUnit = br.friend[i].unit
+                if UnitGroupRolesAssigned(thisUnit) == "TANK" and not UnitIsDeadOrGhost(thisUnit) and getLineOfSight("player", thisUnit) then
+                    tricksUnit = thisUnit
+                    break
+                end
+            end
+        end
     end
 
     local function ttd(unit)
@@ -830,7 +845,7 @@ local function runRotation()
                     end
                 end
             end
-
+            
             if stealthingRogue and (br.player.instance=="party" or br.player.instance=="raid" or isDummy("target")) and isChecked("Vanish") then
                 if cast.ambush("target") then end
             end
@@ -1288,7 +1303,10 @@ local function runRotation()
                 end
             end
 
-
+            --tricks
+            if tricksUnit ~= nil and isValidUnit("target") and getDistance("target") <= 5 then
+                cast.tricksOfTheTrade(tricksUnit)
+            end
 
             if actionList_Interrupts() then end
 
