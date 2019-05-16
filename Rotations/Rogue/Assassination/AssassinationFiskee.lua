@@ -188,7 +188,7 @@ local function runRotation()
     --local pullTimer                                     = br.DBM:getPulltimer()
     local race                                          = br.player.race
     local spell                                         = br.player.spell
-    local stealth                                       = br.player.buff.stealth.exists()
+    local stealth                                       = br.player.buff.stealth.exists() or br.player.buff.stealthSubterfuge.exists()
     local stealthedRogue                                = stealth or br.player.buff.vanish.exists() or br.player.buff.subterfuge.remain() > 0.4 or br.player.cast.last.vanish(1) or botSpell == spell.vanish
     local stealthedAll                                  = stealthedRogue or br.player.buff.shadowmeld.exists()
     local talent                                        = br.player.talent
@@ -470,13 +470,13 @@ local function runRotation()
                 if cast.cripplingPoison("player") then return true end
             end
             -- actions.precombat+=/stealth
-            if isChecked("Auto Stealth") and IsUsableSpell(GetSpellInfo(spell.stealth)) and not cast.last.vanish() and not IsResting() and
+            if isChecked("Auto Stealth") and IsUsableSpell(spell.stealth) and not cast.last.vanish() and not IsResting() and
             (botSpell ~= spell.stealth or (botSpellTime == nil or GetTime() - botSpellTime > 0.1)) then
                 if getOptionValue("Auto Stealth") == 1 then
-                    if cast.stealth() then return end
+                    if cast.stealth("player") then return end
                 end
                 if #enemies.yards15nc > 0 and getOptionValue("Auto Stealth") == 2 then
-                    if cast.stealth() then return end
+                    if cast.stealth("player") then return end
                 end
             end
         end
@@ -748,7 +748,7 @@ local function runRotation()
                 -- # Extra Subterfuge Vanish condition: Use when Garrote dropped on Single Target
                 -- actions.cds+=/vanish,if=talent.subterfuge.enabled&!dot.garrote.ticking&variable.single_target
                 if talent.subterfuge and enemies10 == 1 and getSpellCD(spell.garrote) == 0 and not debuff.garrote.exists("target") then
-                    if cast.pool.garrote(nil, nil, 2) then return true end
+                    if trait.shroudedSuffocation.active and cast.pool.garrote(nil, nil, 2) or cast.pool.garrote() then return true end
                     if cast.vanish("player") then return true end
                 end
                 -- # Vanish with Exsg + (Nightstalker, or Subterfuge only on 1T): Maximum CP and Exsg ready for next GCD
@@ -759,7 +759,8 @@ local function runRotation()
                 end
                 -- # Vanish with Nightstalker + No Exsg: Maximum CP and Vendetta up
                 -- actions.cds+=/vanish,if=talent.nightstalker.enabled&!talent.exsanguinate.enabled&combo_points>=cp_max_spend&debuff.vendetta.up
-                if talent.nightstalker and not talent.exsanguinate and comboDeficit >= comboMax and (debuff.vendetta.exists("target") or not isChecked("Vendetta")) then
+                if talent.nightstalker and not talent.exsanguinate and combo >= comboMax and (debuff.vendetta.exists("target") or not isChecked("Vendetta")) then
+                    if cast.pool.rupture() then return true end
                     if cast.vanish("player") then return true end
                 end
                 -- # Vanish with Subterfuge + (No Exsg or 2T+): No stealth/subterfuge, Garrote Refreshable, enough space for incoming Garrote CP
@@ -771,6 +772,7 @@ local function runRotation()
                 -- # Vanish with Master Assasin: No stealth and no active MA buff, Rupture not in refresh range
                 -- actions.cds+=/vanish,if=talent.master_assassin.enabled&!stealthed.all&master_assassin_remains<=0&!dot.rupture.refreshable
                 if talent.masterAssassin and not stealthedAll and gcd < 0.1 and not buff.masterAssassin.exists() and not debuff.rupture.refresh("target") then
+                    if energyDeficit > (25 + energyRegenCombined) then return true end
                     if cast.vanish("player") then return true end
                 end
             end
@@ -789,7 +791,7 @@ local function runRotation()
     local function actionList_Direct()
         -- # Envenom at 4+ (5+ with DS) CP. Immediately on 2+ targets, with Vendetta, or with TB; otherwise wait for some energy. Also wait if Exsg combo is coming up.
         -- actions.direct=envenom,if=combo_points>=4+talent.deeper_stratagem.enabled&(debuff.vendetta.up|debuff.toxic_blade.up|energy.deficit<=25+variable.energy_regen_combined|!variable.single_target)&(!talent.exsanguinate.enabled|cooldown.exsanguinate.remains>2)
-        if combo >= (4 + dSEnabled) and ((debuff.vendetta.exists("target") or not useCDs() or ttd("target") < getOptionValue("CDs TTD Limit")) or debuff.toxicBlade.exists("target") or energyDeficit <= (25 + energyRegenCombined) or enemies10 > 1) and (not talent.exsanguinate or cd.exsanguinate.remain() > 2 or mode.exsang == 2 or ttd("target") < 8) then
+        if combo >= (4 + dSEnabled) and ((debuff.vendetta.exists("target") or not useCDs() or ttd("target") < getOptionValue("CDs TTD Limit")) or debuff.toxicBlade.exists("target") or buff.masterAssassin.exists() or energyDeficit <= (25 + energyRegenCombined) or enemies10 > 1) and (not talent.exsanguinate or cd.exsanguinate.remain() > 2 or mode.exsang == 2 or ttd("target") < 8) then
             if cast.envenom("target") then return true end
         end
         -- actions.direct+=/variable,name=use_filler,value=combo_points.deficit>1|energy.deficit<=25+variable.energy_regen_combined|!variable.single_target
@@ -977,7 +979,7 @@ local function runRotation()
             end
             -- # Restealth if possible (no vulnerable enemies in combat)
             -- actions=stealth
-            if IsUsableSpell(GetSpellInfo(spell.stealth)) and not cast.last.vanish() then
+            if IsUsableSpell(spell.stealth) and not cast.last.vanish() then
                 cast.stealth("player")
             end
             -- actions+=/call_action_list,name=stealthed,if=stealthed.rogue

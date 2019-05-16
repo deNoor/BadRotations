@@ -88,7 +88,7 @@ local function createOptions()
             -- br.ui:createCheckbox(section, "Opener")
             -- br.ui:createCheckbox(section, "RTB Prepull")
             br.ui:createDropdown(section, "Stealth", {"|cff00FF00Always", "|cffFF000020Yards"},  2, "Stealthing method.")
-
+            br.ui:createDropdown(section, "Auto Tricks", {"|cff00FF00Focus", "|cffFF0000Tank"},  1, "Tricks of the Trade target." )
         br.ui:checkSectionState(section)
         ------------------------
         --- OFFENSIVE OPTIONS ---
@@ -289,6 +289,21 @@ local function runRotation()
         end
         return false
     end
+    
+    local tricksUnit
+    if isChecked("Auto Tricks") and GetSpellCooldown(spell.tricksOfTheTrade) == 0 and inCombat then
+        if getOptionValue("Auto Tricks") == 1 and GetUnitIsFriend("player", "focus") and getLineOfSight("player", "focus") then
+            tricksUnit = "focus"
+        elseif getOptionValue("Auto Tricks") == 2 then
+            for i = 1, #br.friend do
+                local thisUnit = br.friend[i].unit
+                if UnitGroupRolesAssigned(thisUnit) == "TANK" and not UnitIsDeadOrGhost(thisUnit) and getLineOfSight("player", thisUnit) then
+                    tricksUnit = thisUnit
+                    break
+                end
+            end
+        end
+    end
 
     local function ttd(unit)
         if UnitIsPlayer(unit) then return 999 end
@@ -321,7 +336,7 @@ local function runRotation()
         local rtcoef       = 0.35
         local auramult      = 1.13
         local versmult      = (1 + ((GetCombatRatingBonus(CR_VERSATILITY_DAMAGE_DONE) + GetVersatilityBonus(CR_VERSATILITY_DAMAGE_DONE)) / 100))
-        if talent.DeeperStratagem then dsmod = 1.05 else dsmod = 1 end 
+        if talent.deeperStratagem then dsmod = 1.05 else dsmod = 1 end 
         return(
                 apMod * combo * rtcoef * auramult * dsmod * versmult
                 )
@@ -537,7 +552,7 @@ local function runRotation()
         -- end
         local function shouldFinish()
             -- if=combo_points>=cp_max_spend-(buff.broadside.up+buff.opportunity.up)*(talent.quick_draw.enabled&(!talent.marked_for_death.enabled|cooldown.marked_for_death.remains>1))
-            if combo >= comboMax - ((buff.broadside.exists("player") and 1 or 0) + ((buff.opportunity.exists("player") and 1 or 0)))*(talent.quickDraw and (not talent.markedForDeath or cd.markedForDeath.remain() > 1) and 1 or 0) then
+            if combo >= comboMax - (talent.deeperStratagem and 1 or (((buff.broadside.exists("player") and 1 or 0) + ((buff.opportunity.exists("player") and 1 or 0)))*(talent.quickDraw and (not talent.markedForDeath or cd.markedForDeath.remain() > 1) and 1 or 0))) then 
                 return true
             else 
                 return false
@@ -617,6 +632,7 @@ local function runRotation()
                 for i = 1, #burnTable5 do
                     local thisUnit = burnTable5[i].unit
                     if stuff then
+                        if skill == "gouge" and not getFacing(thisUnit, "player") then return end
                         if cast[skill](thisUnit) then return true end
                     end
                 end
@@ -625,6 +641,7 @@ local function runRotation()
             for i = 1, #enemyTable5 do
                 local thisUnit = enemyTable5[i].unit
                 if stuff then
+                    if skill == "gouge" and not getFacing(thisUnit, "player") then return end
                     if cast[skill](thisUnit) then return true end
                 end
             end
@@ -828,7 +845,7 @@ local function runRotation()
                     end
                 end
             end
-
+            
             if stealthingRogue and (br.player.instance=="party" or br.player.instance=="raid" or isDummy("target")) and isChecked("Vanish") then
                 if cast.ambush("target") then end
             end
@@ -896,7 +913,7 @@ local function runRotation()
                 section.averageTime = section.elapsedTime / section.totalIterations
             end            
         end
-
+    -- Action List - Build
         local function actionList_Build()
             local startTime = debugprofilestop()      
 
@@ -909,6 +926,7 @@ local function runRotation()
             if talent.dirtyTricks then
                 cast5yards("gouge",true)
             end
+            
             if isChecked("Debug Timers") then
                 if profile.Builder == nil then profile.Builder = {} end
                 local section = profile.Builder
@@ -1285,7 +1303,10 @@ local function runRotation()
                 end
             end
 
-
+            --tricks
+            if tricksUnit ~= nil and isValidUnit("target") and getDistance("target") <= 5 then
+                cast.tricksOfTheTrade(tricksUnit)
+            end
 
             if actionList_Interrupts() then end
 
@@ -1317,8 +1338,8 @@ local function runRotation()
                 end
             if shouldFinish() or (traits.snakeeyes.rank > 0 and not buff.snakeeeyes.exists() and rtbReroll()) then
                 if actionList_Finishers() then return end
-            end
-            if actionList_Build() then return end
+            --end
+            elseif actionList_Build() then return end
             if isChecked("Pistol Shot out of range") and isValidUnit("target") and #enemyTable5 == 0 and not stealthingAll and power >= getOptionValue("Pistol Shot out of range") and (comboDeficit >= 1 or ttm <= 1.2) then
                 if cast.pistolShot("target") then return true end
             end

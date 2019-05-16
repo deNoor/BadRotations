@@ -863,6 +863,8 @@ br.lists.spells = {
                 barbedShot                  = 217200,
                 barrage                     = 120360,
                 bestialWrath                = 19574,
+                berserking                  = 26297,
+                bloodFury                   = select(7, GetSpellInfo(GetSpellInfo(33702))),
                 bindingShot                 = 109248,
                 chimaeraShot                = 53209,
                 cobraShot                   = 193455,
@@ -873,7 +875,7 @@ br.lists.spells = {
                 intimidation                = 19577,
                 killCommand                 = 34026,
                 misdirection                = 34477,
-                multiShot                   = 2643,
+                multishot                   = 2643,
                 spittingCobra               = 194407,
                 stampede                    = 201430,
                 titansThunder               = 207068,
@@ -885,7 +887,10 @@ br.lists.spells = {
             buffs                           = {
                 aspectOfTheWild             = 193530,
                 beastCleave                 = 118455,
+                berserking                  = 26297,
                 bestialWrath                = 19574,
+                bloodFury                   = select(7, GetSpellInfo(GetSpellInfo(33702))),
+                danceOfDeath                = 274443,
                 direBeast                   = 120694,
                 frenzy                      = 272790,
                 parselsTongue               = 248084,
@@ -907,7 +912,9 @@ br.lists.spells = {
                 spittingCobra               = 194407,
             },
             traits                          = {
+                danceOfDeath                = 274441,
                 primalInstincts             = 279806,
+                rapidReload                 = 278530,
             },
         },
         -- Marksmanship
@@ -918,7 +925,7 @@ br.lists.spells = {
                 burstingShot                = 186387,
                 concussiveShot              = 5116,
                 counterShot                 = 147362,
-                multiShot                   = 257620,
+                multishot                   = 257620,
                 rapidFire                   = 257044,
                 serpentSting                = 271788,
                 steadyShot                  = 56641,
@@ -2188,6 +2195,7 @@ br.lists.spells = {
                 sharpenedBlades             = 272916,
                 masterAssassin              = 256735,
                 stealth                     = 1784 or 115191,
+                stealthSubterfuge           = 115191,
                 subterfuge                  = 115192,
                 theDreadlordsDeceit         = 208692,
                 woundPoison                 = 8679,
@@ -2363,6 +2371,7 @@ br.lists.spells = {
                 sharpenedBlades             = 272916,
                 shurikenCombo               = 245640,
                 shurikenTornado             = 277925,
+                stealthSubterfuge           = 115191,
                 subterfuge                  = 115192,
                 symbolsOfDeath              = 212283,
                 theDreadlordsDeceit         = 228224,
@@ -2417,7 +2426,7 @@ br.lists.spells = {
                 sap                         = 6770,
                 shadowmeld                  = 58984,
                 sprint                      = 2983,
-                stealth                     = 115191,
+                stealth                     = 1784,
                 tricksOfTheTrade            = 57934,
                 vanish                      = 1856,
             },
@@ -2430,7 +2439,7 @@ br.lists.spells = {
                 feint                       = 1966,
                 masterAssassinsInitiative   = 235027, --235022
                 sprint                      = 2983,
-                stealth                     = 115191,
+                stealth                     = 1784,
                 vanish                      = 11327 or 115193,
             },
             debuffs                         = {
@@ -2513,6 +2522,7 @@ br.lists.spells = {
                 stormTotem                  = 210652,
                 surgeOfPower                = 285514,
                 tailwindTotem               = 210659,
+                tectonicThunder             = 286949,
                 windGust                    = 263806,
             },
             debuffs                         = {
@@ -2549,6 +2559,7 @@ br.lists.spells = {
             },
             traits                          = {
                 naturalHarmony              = 278697,
+                tectonicThunder             = 286949,
             },
         },
         -- Enhancement
