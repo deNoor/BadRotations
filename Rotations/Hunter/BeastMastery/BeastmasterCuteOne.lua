@@ -110,7 +110,7 @@ local function createOptions()
             -- Trinkets
             br.ui:createDropdownWithout(section, "Trinkets", {"|cff00FF001st Only","|cff00FF002nd Only","|cffFFFF00Both","|cffFF0000None"}, 1, "|cffFFFFFFSelect Trinket Usage.")
             -- Bestial Wrath
-            br.ui:createCheckbox(section,"Bestial Wrath")
+            br.ui:createDropdownWithout(section,"Bestial Wrath", {"|cff00FF00Boss","|cffFFFF00Always"}, 1, "|cffFFFFFFSelect Bestial Wrath Usage.")
             -- Trueshot
             br.ui:createCheckbox(section,"Aspect of the Wild")
             -- Stampede
@@ -302,11 +302,11 @@ actionList.PetManagement = function()
     end
     -- Claw
     if isChecked("Claw") and cast.able.claw("pettarget") and validTarget and getDistance("pettarget","pet") < 5 then
-        if cast.claw("pettarget") then return end
+        if cast.claw("pettarget","pet") then return end
     end
     -- Dash
     if isChecked("Dash") and cast.able.dash() and validTarget and getDistance("pettarget","pet") > 10 then
-        if cast.dash() then return end
+        if cast.dash(nil,"pet") then return end
     end
     -- Spirit Mend
     if isChecked("Spirit Mend") and petExists and not petDead and not petDead and lowestHP < getOptionValue("Spirit Mend") then
@@ -316,33 +316,27 @@ actionList.PetManagement = function()
 
     -- Purge
     if isChecked("Purge") then
-        if enemies.yards5p then
+        if #enemies.yards5p > 0 then
             local dispelled = false
             local dispelledUnit = "player"
-            for i = 1, #enemies.yards5p do 
+            for i = 1, #enemies.yards5p do
                 local thisUnit = enemies.yards5p[i]
                 if getOptionValue("Purge") == 1 or (getOptionValue("Purge") == 2 and UnitIsUnit(thisUnit,"target")) then
                     if canDispel(thisUnit,spell.spiritShock) then
-                        if cast.able.spiritShock(thisUnit) then
-                            if cast.spiritShock(thisUnit) then dispelled = true; dispelledUnit = thisUnit; break end
-                        end
-                        if cast.able.chiJiTranq(thisUnit) then
-                            if cast.chiJiTranq(thisUnit) then dispelled = true; dispelledUnit = thisUnit; break end
-                        end
-                        if cast.able.naturesGrace(thisUnit) then
-                            if cast.naturesGrace(thisUnit) then dispelled = true; dispelledUnit = thisUnit; break end
-                        end
-                        if cast.able.netherShock(thisUnit) then
-                            if cast.netherShock(thisUnit) then dispelled = true; dispelledUnit = thisUnit; break end
-                        end
-                        if cast.able.sonicBlast(thisUnit) then
-                            if cast.sonicBlast(thisUnit) then dispelled = true; dispelledUnit = thisUnit; break end
-                        end
-                        if cast.able.soothingWater(thisUnit) then
-                            if cast.soothingWater(thisUnit) then dispelled = true; dispelledUnit = thisUnit; break end
-                        end
-                        if cast.able.sporeCloud(thisUnit) then
-                            if cast.sporeCloud(thisUnit) then dispelled = true; dispelledUnit = thisUnit; break end
+                        if cast.able.spiritShock(thisUnit,"pet") then
+                            if cast.spiritShock(thisUnit,"pet") then dispelled = true; dispelledUnit = thisUnit; break end
+                        elseif cast.able.chiJiTranq(thisUnit,"pet") then
+                            if cast.chiJiTranq(thisUnit,"pet") then dispelled = true; dispelledUnit = thisUnit; break end
+                        elseif cast.able.naturesGrace(thisUnit,"pet") then
+                            if cast.naturesGrace(thisUnit,"pet") then dispelled = true; dispelledUnit = thisUnit; break end
+                        elseif cast.able.netherShock(thisUnit,"pet") then
+                            if cast.netherShock(thisUnit,"pet") then dispelled = true; dispelledUnit = thisUnit; break end
+                        elseif cast.able.sonicBlast(thisUnit,"pet") then
+                            if cast.sonicBlast(thisUnit,"pet") then dispelled = true; dispelledUnit = thisUnit; break end
+                        elseif cast.able.soothingWater(thisUnit,"pet") then
+                            if cast.soothingWater(thisUnit,"pet") then dispelled = true; dispelledUnit = thisUnit; break end
+                        elseif cast.able.sporeCloud(thisUnit,"pet") then
+                            if cast.sporeCloud(thisUnit,"pet") then dispelled = true; dispelledUnit = thisUnit; break end
                         end
                     end
                 end
@@ -411,17 +405,18 @@ actionList.Extras = function()
         if isValidUnit("target") then
             if getOptionValue("Misdirection") == 1 and (inInstance or inRaid) then
                 for i = 1, #br.friend do
-                    if (br.friend[i].role == "TANK" or UnitGroupRolesAssigned(br.friend[i].unit) == "TANK")
-                        and UnitAffectingCombat(br.friend[i].unit)
+                    local thisFriend = br.friend[i].unit
+                    if (br.friend[i].role == "TANK" or UnitGroupRolesAssigned(thisFriend) == "TANK")
+                        and UnitAffectingCombat(thisFriend) and not UnitIsDeadOrGhost(thisFriend)
                     then
-                        if cast.misdirection(br.friend[i].unit) then return end
+                        if cast.misdirection(thisFriend) then return end
                     end
                 end
             elseif getOptionValue("Misdirection") == 2 and GetUnitExists("focus")
                 and not UnitIsDeadOrGhost("focus") and GetUnitIsFriend("focus","player")
             then
                 if cast.misdirection("focus") then return end
-            elseif getOptionValue("Misdirection") == 3 and GetUnitExists("pet") then
+            elseif getOptionValue("Misdirection") == 3 and GetUnitExists("pet") and not UnitIsDeadOrGhost("pet") then
                 if cast.misdirection("pet") then return end
             end
         end
@@ -550,14 +545,14 @@ actionList.Cooldowns = function()
         then
             if cast.aspectOfTheWild() then return end
         end
-        -- Bestial Wrath
-        -- bestial_wrath,precast_time=1.5,if=azerite.primal_instincts.enabled
-        if isChecked("Bestial Wrath") and mode.bestialWrath == 1 and cast.able.bestialWrath() 
-            and (traits.primalInstincts.active) and ttd(units.dyn40) > 15
-        then
-            if cast.bestialWrath() then return end
-        end
     end -- End useCooldowns check
+    -- Bestial Wrath
+    -- bestial_wrath,precast_time=1.5,if=azerite.primal_instincts.enabled
+    if mode.bestialWrath == 1 and (getOptionValue("Bestial Wrath") == 2 or (getOptionValue("Bestial Wrath") == 1 and useCDs()))
+        and cast.able.bestialWrath() and (traits.primalInstincts.active) and ttd(units.dyn40) > 15
+    then
+        if cast.bestialWrath() then return end
+    end
 end -- End Action List - Cooldowns
 
 -- Action List - Opener
@@ -613,8 +608,8 @@ actionList.St = function()
     end
     -- Bestial Wrath
     -- bestial_wrath,if=cooldown.aspect_of_the_wild.remains>20|target.time_to_die<15
-    if isChecked("Bestial Wrath") and mode.bestialWrath == 1 and cast.able.bestialWrath() 
-        and cd.aspectOfTheWild.remain() > 20 and ttd(units.dyn40) > 15
+    if mode.bestialWrath == 1 and (getOptionValue("Bestial Wrath") == 2 or (getOptionValue("Bestial Wrath") == 1 and useCDs()))
+        and cast.able.bestialWrath() and cd.aspectOfTheWild.remain() > 20 and ttd(units.dyn40) > 15
     then
         if cast.bestialWrath() then return end
     end
@@ -698,8 +693,8 @@ actionList.Cleave = function()
     end
     -- Bestial Wrath
     -- bestial_wrath,if=cooldown.aspect_of_the_wild.remains_guess>20|talent.one_with_the_pack.enabled|target.time_to_die<15
-    if isChecked("Bestial Wrath") and mode.bestialWrath == 1 and cast.able.bestialWrath() 
-        and (cd.aspectOfTheWild.remains() > 20 or talent.oneWithThePack) and ttd(units.dyn40) > 15 
+    if mode.bestialWrath == 1 and (getOptionValue("Bestial Wrath") == 2 or (getOptionValue("Bestial Wrath") == 1 and useCDs()))
+        and cast.able.bestialWrath() and (cd.aspectOfTheWild.remains() > 20 or talent.oneWithThePack) and ttd(units.dyn40) > 15 
     then
         if cast.bestialWrath() then return end
     end
