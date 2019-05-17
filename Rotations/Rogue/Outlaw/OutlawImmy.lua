@@ -632,8 +632,8 @@ local function runRotation()
                 for i = 1, #burnTable5 do
                     local thisUnit = burnTable5[i].unit
                     if stuff then
-                        if skill == "gouge" and not getFacing(thisUnit, "player") then continue end
-                        if getFacing("player", thisUnit) and cast[skill](thisUnit) then return true end
+                        if (skill == "gouge" and getFacing(thisUnit, "player") or true) and
+                            getFacing("player", thisUnit) and cast[skill](thisUnit) then return true end
                     end
                 end
             end
@@ -641,8 +641,8 @@ local function runRotation()
             for i = 1, #enemyTable5 do
                 local thisUnit = enemyTable5[i].unit
                 if stuff then
-                    if skill == "gouge" and not getFacing(thisUnit, "player") then continue end
-                    if getFacing("player", thisUnit) and cast[skill](thisUnit) then return true end
+                    if (skill == "gouge" and getFacing(thisUnit, "player") or true) and
+                        getFacing("player", thisUnit) and cast[skill](thisUnit) then return true end
                 end
             end
         end
