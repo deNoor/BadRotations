@@ -1284,7 +1284,7 @@ local function runRotation()
         -- end
 
 
-        if mode.bladeflurry == 1 and buff.rollTheBones.remain >= 5 and bftargets >= 2 and not buff.bladeFlurry.exists() and charges.bladeFlurry.frac() >= 1.5 then
+        if mode.bladeflurry == 1 and (buff.rollTheBones.remain >= 5 or buff.sliceAndDice.remain() >= 5) and bftargets >= 2 and not buff.bladeFlurry.exists() and charges.bladeFlurry.frac() >= 1.5 then
             if cast.bladeFlurry("player") then return true end
         end
 
