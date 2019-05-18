@@ -1,4 +1,4 @@
-local rotationName = "immy1 "
+local rotationName = "immy1"
 local br = br
 br.rogueTables = {}
 local rogueTables = br.rogueTables
@@ -184,9 +184,9 @@ local function runRotation()
 ---------------
 --- Toggles ---
 ---------------
-        UpdateToggle("Rotation",0.25)
-        UpdateToggle("Interrupt",0.25)
-        UpdateToggle("BladeFlurry",0.25)
+        --UpdateToggle("Rotation",0.25)
+        --UpdateToggle("Interrupt",0.25)
+        --UpdateToggle("BladeFlurry",0.25)
         br.player.mode.bladeflurry = br.data.settings[br.selectedSpec].toggles["BladeFlurry"]
         br.player.mode.stun = br.data.settings[br.selectedSpec].toggles["Stun"]
         br.player.mode.mfd = br.data.settings[br.selectedSpec].toggles["MFD"]
