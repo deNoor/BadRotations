@@ -94,8 +94,6 @@ local function createOptions()
             br.ui:createSpinner(section, "Mend Pet",  50,  0,  100,  5,  "|cffFFFFFFHealth Percent to Cast At")
             -- Spirit Mend
             br.ui:createSpinner(section, "Spirit Mend", 70, 0, 100, 5, "|cffFFFFFFHealth Percent to Cast At")
-            -- Pet Attacks
-            br.ui:createCheckbox(section, "Pet Attacks")
             -- Purge
             br.ui:createDropdown(section, "Purge", {"Every Unit","Only Target"}, 2, "Select if you want Purge only Target or every Unit arround the Pet")
         br.ui:checkSectionState(section)
@@ -240,7 +238,7 @@ actionList.PetManagement = function()
     local petActive = IsPetActive()
     local petExists = UnitExists("pet")
     local petDead = UnitIsDeadOrGhost("pet")
-    local validTarget = isValidUnit("pettarget")
+    local validTarget = isValidUnit("pettarget") or (not UnitExists("pettarget") and isValidTarget("target"))
 
     if IsMounted() or flying or UnitHasVehicleUI("player") or CanExitVehicle("player") then
         waitForPetToAppear = GetTime()
@@ -558,7 +556,7 @@ end -- End Action List - Cooldowns
 actionList.Opener = function()
     -- Start Attack
     -- auto_attack
-    if isChecked("Opener") and isBoss("target") and not opener.complete then
+    if isChecked("Opener") and useCDs() and not opener.complete then
         if isValidUnit("target") and getDistance("target") < 40
             and getFacing("player","target") and getSpellCD(61304) == 0
         then
@@ -722,7 +720,7 @@ actionList.Opener = function()
                 opener.complete = true
             end
         end
-    elseif (UnitExists("target") and not isBoss("target")) or not isChecked("Opener") then
+    elseif (UnitExists("target") and not useCDs()) or not isChecked("Opener") then
         opener.complete = true
     end
 end -- End Action List - Opener
@@ -739,7 +737,7 @@ actionList.St = function()
     end
     -- Aspect of the Wild
     -- aspect_of_the_wild
-    if isChecked("Aspect of the Wild") and useCDs() and cast.able.aspectOfTheWild() and ttd(units.dyn40) > 15 then
+    if isChecked("Aspect of the Wild") and useCDs() and cast.able.aspectOfTheWild() and (ttd(units.dyn40) > 15 or useCDs()) then
         if cast.aspectOfTheWild() then return end
     end
     -- A Murder of Crows
@@ -750,14 +748,16 @@ actionList.St = function()
     -- Stampede
     -- stampede,if=buff.aspect_of_the_wild.up&buff.bestial_wrath.up|target.time_to_die<15
     if isChecked("Stampede") and talent.stampede and cast.able.stampede() 
-        and (buff.aspectOfTheWild.exists() and buff.bestialWrath.exists()) and ttd(units.dyn40) > 15
+        and (buff.aspectOfTheWild.exists() and buff.bestialWrath.exists()) and (ttd(units.dyn40) > 15 or useCDs())
     then
         if cast.stampede() then return end
     end
     -- Bestial Wrath
     -- bestial_wrath,if=cooldown.aspect_of_the_wild.remains>20|target.time_to_die<15
-    if mode.bestialWrath == 1 and (getOptionValue("Bestial Wrath") == 2 or (getOptionValue("Bestial Wrath") == 1 and useCDs()))
-        and cast.able.bestialWrath() and cd.aspectOfTheWild.remain() > 20 and ttd(units.dyn40) > 15
+    if mode.bestialWrath == 1 and cast.able.bestialWrath() 
+        and (getOptionValue("Bestial Wrath") == 2 or (getOptionValue("Bestial Wrath") == 1 and useCDs()))
+        and (not isChecked("Aspect of the Wild") or (getOptionValue("Bestial Wrath") == 2 and not useCDs()) or cd.aspectOfTheWild.remains() > 20) 
+        and (ttd(units.dyn40) > 15 or useCDs())
     then
         if cast.bestialWrath() then return end
     end
@@ -829,20 +829,22 @@ actionList.Cleave = function()
     end
     -- Aspect of the Wild
     -- aspect_of_the_wild
-    if isChecked("Aspect of the Wild") and useCDs() and cast.able.aspectOfTheWild() and ttd(units.dyn40) > 15 then
+    if isChecked("Aspect of the Wild") and useCDs() and cast.able.aspectOfTheWild() and (ttd(units.dyn40) > 15 or useCDs()) then
         if cast.aspectOfTheWild() then return end
     end
     -- Stampede
     -- stampede,if=buff.aspect_of_the_wild.up&buff.bestial_wrath.up|target.time_to_die<15
     if isChecked("Stampede") and talent.stampede and cast.able.stampede() 
-        and (buff.aspectOfTheWild.exists() and buff.bestialWrath.exists()) and ttd(units.dyn40) > 15 
+        and (buff.aspectOfTheWild.exists() and buff.bestialWrath.exists()) and (ttd(units.dyn40) > 15 or useCDs()) 
     then
         if cast.stampede() then return end
     end
     -- Bestial Wrath
     -- bestial_wrath,if=cooldown.aspect_of_the_wild.remains_guess>20|talent.one_with_the_pack.enabled|target.time_to_die<15
-    if mode.bestialWrath == 1 and (getOptionValue("Bestial Wrath") == 2 or (getOptionValue("Bestial Wrath") == 1 and useCDs()))
-        and cast.able.bestialWrath() and (cd.aspectOfTheWild.remains() > 20 or talent.oneWithThePack) and ttd(units.dyn40) > 15 
+    if mode.bestialWrath == 1 and cast.able.bestialWrath() 
+        and (getOptionValue("Bestial Wrath") == 2 or (getOptionValue("Bestial Wrath") == 1 and useCDs()))
+        and (not isChecked("Aspect of the Wild") or (getOptionValue("Bestial Wrath") == 2 and not useCDs()) or cd.aspectOfTheWild.remains() > 20 or talent.oneWithThePack) 
+        and (ttd(units.dyn40) > 15 or useCDs()) 
     then
         if cast.bestialWrath() then return end
     end
