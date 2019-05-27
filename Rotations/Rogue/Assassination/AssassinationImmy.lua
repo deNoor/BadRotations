@@ -1219,124 +1219,39 @@ local function runRotation()
           end
         end
         
-        if cd.garrote.remain() == 0 and cd.vanish.remain() == 0 and not debuff.garrote.exsang("target") and debuff.garrote.applied("target") <= 1 and debuff.garrote.remain("target") <= 5.4 then
-          forceenvstealth = true
-          
-          if gcd >= 0.5 then
-            ChatOverlay("Pooling gcd For vanish")
-            return true
-          end
-          if energy <= 70 then
-            return true
-          end
-          if cast.vanish() then
-            if isChecked("Debug") then
-              print("vanish solo use")
-            end
-            if actionList_Stealthed() then
-              return true
-            end
-          end
-        end
-      end
-      
-      if isChecked("Apply Deadly Poison in melee") then
-        for i = 1, enemies5 do
-          local thisUnit = enemyTable5[i].unit
-          if UnitDebuffID(thisUnit, 268756) or ((debuff.garrote.exists(thisUnit) or debuff.rupture.exists(thisUnit)) and not debuff.deadlyPoison.exists(thisUnit)) then
-            --print("refresh poison melee")
-            local firsttarget = GetObjectWithGUID(ObjectGUID("target"))
-            CastSpellByID(6603, thisUnit)
-            CastSpellByID(6603, firsttarget)
-          end
-        end
-      end
-      
-      -- if getDistance(units.dyn5) <= 5 then
-      
-      --     if not debuff.garrote.exists("target") and comboDeficit >= 2 then
-      --         if cast.vanish() then end
-      --         if cast.garrote() then return end
-      --     end
-      -- --pool for vanish
-      -- if cd.vendetta.remain() > 0 and cd.exsanguinate.remain() > 0 and not cd.garrote.exists() and ((debuff.garrote.applied("target") > 1 and debuff.garrote.remain("target") < gcd) or not debuff.garrote.exists("target")) and comboDeficit >= 2 then
-      --     if debuff.garrote.remain("target") > 0 then return true end
-      
-      -- end
-      
-      -- end
-      -- if cd.vendetta.remain() > 0 and cd.exsanguinate.remain() > 0 and not cd.garrote.exists() and not debuff.garrote.exists("target") then
-      --     if comboDeficit >= 2 and not debuff.garrote.exists() then
-      
-      -- end
-      
-      -- if stealthingRogue and debuff.garrote.exists() and combo==ComboMaxSpend() and debuff.rupture.refresh() then
-      --     if cast.rupture() then return end
-      -- end
-      
-      -- if stealthingRogue and (cast.last.rupture() or comboDeficit >= 2) then
-      --     if cast.garrote() then return end
-      -- end
-    end
-    
-    local function actionList_OpenNoVend()
-      if not br.player.moving and isChecked("Galecaller") then
-        -- use_item,name=galecallers_boon,if=cooldown.vendetta.remains<=1&(!talent.subterfuge.enabled|dot.garrote.pmultiplier>1)|cooldown.vendetta.remains>45
-        if canUse(13) and hasEquiped(159614, 13) then
-          useItem(13)
-        end
-        if canUse(14) and hasEquiped(159614, 14) then
-          useItem(14)
-        end
-      end
-      
-      if not RUP1 and cast.able.rupture() then
-        if cast.rupture() then
-          RUP1 = true
-        end
-      elseif RUP1 and not GAR1 and cast.able.garrote() then
-        if cast.garrote() then
-          GAR1 = true
-        end
-      elseif GAR1 and not VEN1 and cast.able.mutilate() then
-        if cast.mutilate() then
-          VEN1 = true
-        end
-      elseif VEN1 and not MUTI1 and cast.able.rupture() then
-        if cast.rupture() then
-          MUTI1 = true
-        end
-      elseif MUTI1 and not RUP2 and cast.able.exsanguinate() then
-        if cast.exsanguinate() then
-          RUP2 = true
-        end
-        if RUP2 then
-          Print("Opener Complete")
-          opener = true
-          toggle("Opener", 2)
-        end
-        return
-      end
-    end
-    
-    local function actionList_Open()
-      --if (opener == false and time < 1) and (isDummy("target") or isBoss("target")) and (cd.vanish > 0 or not buff.shadowBlades.exists()) then Print("Opener failed due do cds"); opener = true end
-      if talent.subterfuge then
-        if trait.shroudedSuffocation.rank > 0 then
-          if talent.exsanguinate then
-            if not RUP1 and cast.able.rupture("target") then
-              if cast.rupture("target") then
-                RUP1 = true
-              end
-            elseif RUP1 and not GAR1 and cast.able.garrote("target") then
-              if cast.garrote("target") then
-                GAR1 = true
-              end
-            elseif GAR1 and not VEN1 and cast.able.vendetta("target") then
-              if isChecked("Racial") then
-                if race == "Orc" or race == "MagharOrc" or race == "DarkIronDwarf" or race == "Troll" then
-                  if cast.racial("player") then
-                  end
+--------------------
+--- Action Lists ---
+--------------------
+    -- Action List - Extras
+        --[[local function actionList_Extras()
+        end -- End Action List - Extras]]
+    -- Action List - DefensiveModes
+        local function actionList_Defensive()
+            SLASH_FEINT1 = "/feinterino"
+            SlashCmdList["FEINT"] = function(msg)
+            if not buff.feint.exists() or (buff.feint.exists() and buff.feint.remain() <= 0.8) or isDeBuffed("player", 230139) and mode.feint == 2 then
+                    if toggle("Feint",1) then return true end
+                end
+            end 
+            -- Feint
+                if mode.feint == 1 and not buff.feint.exists() then
+                    if cast.feint() and toggle("Feint",2) then return true end
+                end
+
+            if useDefensive() and not stealth then
+            -- Health Pot/Healthstone
+                if isChecked("Healing Potion/Healthstone") and php <= getOptionValue("Healing Potion/Healthstone")
+                    and inCombat and (hasHealthPot() or hasItem(5512))
+                then
+                    if canUseItem(5512) then
+                        useItem(5512)
+                    elseif canUseItem(healPot) then
+                        useItem(healPot)
+                    end
+                end
+            -- Crimson Vial
+                if cast.able.crimsonVial() and isChecked("Crimson Vial") and php < getOptionValue("Crimson Vial") then
+                    if cast.crimsonVial() then return true end
                 end
               end
               if canUse(13) then
@@ -1643,16 +1558,11 @@ local function runRotation()
         if debuff.garrote.remain(cdtarget) >= 5.4 and debuff.rupture.remain(cdtarget) >= 4 + (4 * comboMax) and (debuff.vendetta.exists(cdtarget) or cd.vendetta.remain() >= 5) then
           if isChecked("Galecaller") then
             -- use_item,name=galecallers_boon,if=cooldown.vendetta.remains<=1&(!talent.subterfuge.enabled|dot.garrote.pmultiplier>1)|cooldown.vendetta.remains>45
-            if canUse(13) and hasEquiped(159614, 13) then
-              useItem(13)
+            if canUseItem(13) and hasEquiped(159614, 13) then
+                useItem(13)
             end
-            if canUse(14) and hasEquiped(159614, 14) then
-              useItem(14)
-            end
-          end
-          if cast.exsanguinate(cdtarget) then
-            if isChecked("Debug") then
-              print("exsa cd")
+            if canUseItem(14) and hasEquiped(159614, 14) then
+                useItem(14)
             end
             return true
           end
@@ -1719,10 +1629,72 @@ local function runRotation()
             return true
           end
 
-          if cast.vanish() then
-            StopAttack()
-            if isChecked("Debug") then
-              print("vanish tb cd")
+        local function actionList_Open()
+            --if (opener == false and time < 1) and (isDummy("target") or isBoss("target")) and (cd.vanish > 0 or not buff.shadowBlades.exists()) then Print("Opener failed due do cds"); opener = true end
+        if talent.subterfuge then
+            if trait.shroudedSuffocation.rank > 0 then
+                if talent.exsanguinate then
+                        if not RUP1 and cast.able.rupture("target") then
+                            if cast.rupture("target") then RUP1 = true; end
+                        elseif RUP1 and not GAR1 and cast.able.garrote("target") then
+                            if cast.garrote("target") then GAR1 = true; end
+                        elseif GAR1 and not VEN1 and cast.able.vendetta("target") then
+                            if isChecked("Racial") then
+                                if race == "Orc" or race == "MagharOrc" or race == "DarkIronDwarf" or race == "Troll" then
+                                    if cast.racial("player") then end
+                                end
+                            end
+                            if canUseItem(13) then
+                                useItem(13)
+                            end
+                            if canUseItem(14) then
+                                useItem(14)
+                            end
+                            if cast.vendetta("target") then VEN1 = true; end
+                        elseif VEN1 and not MUTI1 and cast.able.mutilate("target") then
+                            if cast.mutilate("target") then MUTI1 = true; end
+                        elseif MUTI1 and not RUP2 and cast.able.rupture("target") then
+                            if cast.rupture("target") then RUP2 = true; end
+                        elseif RUP2 and not EXS1 and cast.able.exsanguinate("target") then
+                            if cast.exsanguinate("target") then EXS1 = true; end
+                        if EXS1 then
+                            Print("Opener Complete")
+                            opener = true
+                            toggle("Opener",2)
+                        end
+                            return 
+                        end
+                end
+                if talent.toxicBlade then
+                        if not RUP1 and cast.able.rupture() then
+                            if cast.rupture() then RUP1 = true; end
+                        elseif RUP1 and not GAR1 and cast.able.garrote() then
+                            if cast.garrote() then GAR1 = true; end
+                        elseif GAR1 and not VEN1 and cast.able.vendetta() then
+                            if isChecked("Racial") then
+                                if race == "Orc" or race == "MagharOrc" or race == "DarkIronDwarf" or race == "Troll" then
+                                    if cast.racial("player") then end
+                                end
+                            end
+                            if canUseItem(13) then
+                                useItem(13)
+                            end
+                            if canUseItem(14) then
+                                useItem(14)
+                            end
+                            if cast.vendetta() then VEN1 = true; end
+                        elseif VEN1 and not MUTI1 and cast.able.toxicBlade() then
+                            if cast.toxicBlade() then MUTI1 = true; end
+                        elseif MUTI1 and not RUP2 and cast.able.envenom() then
+                            if cast.envenom() then RUP2 = true; end
+                        elseif RUP2 and not EXS1 and cast.able.mutilate() then
+                            if cast.mutilate() then EXS1 = true; end
+                            Print("Opener Complete")
+                            opener = true
+                            toggle("Opener",2)
+                            return true
+                        end
+                end                
             end
           end
         end
@@ -1758,78 +1730,90 @@ local function runRotation()
         end
       end
 
-      if not inCombat and not stealth then
-          if isChecked("Stealth") then
-            if getOptionValue("Stealth") == 1 or #enemies.yards20nc > 0 then
-                if cast.stealth("player") then end
-            end
-          end
-      end
-      
-      if ((not inCombat and buff.deadlyPoison.remain("player") <= 600) or not buff.deadlyPoison.exists("player")) and not br.player.moving and (botSpell ~= spell.deadlyPoison or (not botSpellTime or GetTime() - botSpellTime > 2)) then
-        if cast.deadlyPoison("player") then return true end
-      end
-    end -- End Action List - PreCombat
-    
-    local function actionList_Dot()
-      --Rupture anything if no bleeds
-      -- if combo >= 1 and not talent.crimsonTempest and
-      --     debuff.rupture.count() == 0 and
-      --     enemies5 > 0  then
-      --     if cast.rupture(enemyTable5[1].unit) then
-      --         if isChecked("Debug") then print("dot apl Rupture if no bleeds") end
-      --     return end
-      -- end
-      
-      -- # Special Rupture setup for Exsg
-      -- actions.dot=rupture,if=talent.exsanguinate.enabled&((combo_points>=cp_max_spend&cooldown.exsanguinate.remains<1)|(!ticking&(time>10|combo_points>=2)))
-      if mode.special == 1 and enemies5 > 0 and enemies10 < 3 and talent.exsanguinate and ((combo >= comboMax and cd.exsanguinate.remain() < 1) or (not debuff.rupture.exists("target") and (combatTime > 10 or combo >= 2))) and ttd("target") > 10
-      then
-        if cast.rupture("target") then
-          if isChecked("Debug") then
-            print("dot apl Special Rupture setup for Exsg")
-          end
-          return true
-        end
-      end
+            if trait.shroudedSuffocation.rank <= 0 then
+                if talent.exsanguinate then
+                        if not RUP1 and cast.able.mutilate() then
+                            if cast.mutilate() then RUP1 = true; end
+                        elseif RUP1 and not GAR1 and cast.able.rupture() then
+                            if cast.rupture() then GAR1 = true; end
+                        elseif GAR1 and not VEN1 and cast.able.vendetta() then
+                            if isChecked("Racial") then
+                                if race == "Orc" or race == "MagharOrc" or race == "DarkIronDwarf" or race == "Troll" then
+                                    if cast.racial("player") then end
+                                end
+                            end
+                            if canUseItem(13) then
+                                useItem(13)
+                            end
+                            if canUseItem(14) then
+                                useItem(14)
+                            end
+                            if cast.vendetta() then VEN1 = true; end
+                        elseif VEN1 and not MUTI1 and cast.able.mutilate() and combo < ComboMaxSpend() - 1 then
+                            if cast.mutilate() then end
+                        elseif VEN1 and not MUTI1 and combo >= ComboMaxSpend() - 1 then MUTI1 = true
+                        elseif MUTI1 and not RUP2 and cast.able.rupture() then
+                            if cast.rupture() then RUP2 = true; end
+                        elseif RUP2 and not VAN1 then
+                            if gcd >= 0.2 then ChatOverlay("Pooling gcd For vanish") return true end
+                            if cast.vanish() then VAN1 = true; end
+                        elseif VAN1 and not VANGAR and cast.able.garrote() then
+                            if cast.garrote() then VANGAR = true; end
+                        elseif VANGAR and not EXS1 and cast.able.exsanguinate() then
+                            if cast.exsanguinate() then EXS1 = true; end
+                            Print("Opener Complete")
+                            opener = true
+                            toggle("Opener",2)
+                            return true
+                        end
+                end
+                if talent.toxicBlade then
+                        if  combo < 4 and not GAR1 and cast.able.mutilate() then
+                            if cast.mutilate() then RUP1 = true; end
+                        elseif not GAR1 and combo >= 4 and cast.able.rupture() then
+                            if cast.rupture() then GAR1 = true; end
+                        elseif GAR1 and not VEN1 and cast.able.vendetta() then
+                            if isChecked("Racial") then
+                                if race == "Orc" or race == "MagharOrc" or race == "DarkIronDwarf" or race == "Troll" then
+                                    if cast.racial("player") then end
+                                end
+                            end
+                            if canUseItem(13) then
+                                useItem(13)
+                            end
+                            if canUseItem(14) then
+                                useItem(14)
+                            end
+                            if cast.vendetta() then VEN1 = true; end
+                        elseif VEN1 and not MUTI1 and cast.able.mutilate() then
+                            if cast.mutilate() then MUTI1 = true; end
+                        elseif MUTI1 and not RUP2 and cast.able.toxicBlade() then
+                            if cast.toxicBlade() then RUP2 = true; end
+                            Print("Opener Complete")
+                            opener = true
+                            toggle("Opener",2)
+                            return true
+                        end
+                end                
+            end            
+        end -- subt talent
 
-      if isChecked("Prefer fok over finisher when energy positive") and not spread and trait.echoingBlades.rank >= 1 then
-        if fokoverfinisher and enemies10 > 2 and mode.cleave == 1 and fokcccheck()  then
-          if cast.fanOfKnives("player") then
-            if isChecked("Debug") then
-              print("dot apl FoK over finisher")
-            end
-            return true
-          end
-        end
-      end
-      -- # Garrote upkeep, also tries to use it as a special generator for the last CP before a finisher
-      -- actions.dot+=/pool_resource,for_next=1
-      -- actions.dot+=/garrote,cycle_targets=1,if=(!talent.subterfuge.enabled|!(cooldown.vanish.up&cooldown.vendetta.remains<=4))&
-      -- combo_points.deficit>=1&refreshable&(pmultiplier<=1|remains<=tick_time&spell_targets.fan_of_knives>=3+azerite.shrouded_suffocation.enabled)&
-      -- (!exsanguinated|remains<=tick_time*2&spell_targets.fan_of_knives>=3+azerite.shrouded_suffocation.enabled)
-      -- &!ss_buffed&(target.time_to_die-remains>4&spell_targets.fan_of_knives<=1|target.time_to_die-remains>12)
-      if mode.van1 == 2 and mode.van2 == 2 and enemies5 > 0 then
-        if mode.cleave == 1 then
-          for i = 1, enemies5 do
-            local thisUnit = enemyTable5[i].unit
-            local garroteRemain = debuff.garrote.remain(thisUnit)
-            if
-            (not talent.subterfuge or not (
-              cd.vanish.remain() <= 
-              gcd and 
-              cd.vendetta.remain() <= 4 and mode.special == 1 and (mode.van1 == 1 or mode.van2 == 1))) and comboDeficit >= 1 and garroteRemain <= 5.4 and
-                    (debuff.garrote.applied(thisUnit) <= 1 or (garroteRemain <= BleedTickTime and enemies10 >= (3 + sSActive))) and
-                    (not debuff.garrote.exsang(thisUnit) or (garroteRemain < ExsanguinatedBleedTickTime and enemies10 >= (3 + sSActive))) and
-                    ((enemyTable5[i].ttd - garroteRemain > 4 and enemies10 <= 1) or enemyTable5[i].ttd - garroteRemain > 12) and
-                    donotdot(thisUnit)
-            then
-              if energyRegenCombined <= 40 then
-                if cast.garrote(thisUnit) then
-                  if isChecked("Debug") then
-                    print("dot apl Garrote upkeep")
-                  end
-                  return true
+        if talent.masterAssassin then
+            if  not GAR1 and cast.able.mutilate() then
+                if cast.mutilate("target") then GAR1 = true; end
+            elseif GAR1 and not RUP1 and cast.able.rupture() then
+                if cast.rupture("target") then RUP1 = true; end
+            elseif RUP1 and not VEN1 and cast.able.vendetta() then
+                if isChecked("Racial") then
+                    if race == "Orc" or race == "MagharOrc" or race == "DarkIronDwarf" or race == "Troll" then
+                        if cast.racial("player") then end
+                    end
+                end
+                if canUseItem(13) then
+                    useItem(13)
+                end
+                if canUseItem(14) then
+                    useItem(14)
                 end
               end
             end
@@ -1856,15 +1840,127 @@ local function runRotation()
             end
           end
         end
-      end
+    -- Action List - Cooldowns
+        local function actionList_Cooldowns()
+            if getDistance("target") < 5 then
+                if mode.special == 1 then
+                    if isChecked("Racial") and debuff.vendetta.exists("target") and ttd("target") > 5  then
+                        if race == "Orc" or race == "MagharOrc" or race == "DarkIronDwarf" or race == "Troll" then
+                            if cast.racial("player") then
+                                if isChecked("Debug") then print("racial") end
+                            return true end
+                        end
+                    end
 
-      -- # Crimson Tempest only on multiple targets at 4+ CP when running out in 2s (up to 4 targets) or 3s (5+ targets)
-      -- actions.dot+=/crimson_tempest,if=spell_targets>=2&remains<2+(spell_targets>=5)&combo_points>=4
-      if talent.crimsonTempest and mode.cleave == 1 then
-        if ((enemies10 >= 2 and debuff.crimsonTempest.remain("target") < 2 + (enemies10 > 5 and 1 or 0)) or shouldCTaoe) and combo >= 4 and fokcccheck() then
-          if cast.crimsonTempest("player") then
-            if isChecked("Debug") then
-              print("dot apl Crimson Tempest at " .. debuff.crimsonTempest.remain("target") .. " targets")
+                    if talent.exsanguinate then
+                        if not debuff.rupture.exists("target") and combo >= 2 then 
+                            if cast.rupture("target") then
+                                if isChecked("Debug") then print("new rupt cd") end 
+                            return true end
+                        end
+
+                        if cast.able.garrote("target") and not debuff.garrote.exsang(GetObjectWithGUID(UnitGUID("target"))) and debuff.garrote.applied(GetObjectWithGUID(UnitGUID("target"))) <= 1 and debuff.garrote.remain("target") <= 12 and mode.van1 ~= 1 and mode.van2 ~= 1 then
+                            if cast.garrote("target") then
+                                if isChecked("Debug") then print("garrote new cd") end
+                            return true end
+                        end
+
+                        if cd.exsanguinate.remain() <= 5 and (debuff.garrote.remain() > 10 or debuff.garrote.applied(GetObjectWithGUID(UnitGUID("target"))) > 1) and combo >= 4 and debuff.rupture.remain("target") <= 20 and cast.able.rupture() then
+                            if cast.rupture() then
+                                if isChecked("Debug") then print("rupt before exsa cd") end
+                            return true end
+                        end
+
+                        if power <= 30 and cast.able.vendetta("target") then
+                                if isChecked("Trinkets") then
+                                    if canUseItem(13) then
+                                        useItem(13)
+                                    end
+                                    if canUseItem(14) then
+                                        useItem(14)
+                                    end
+                                end                  
+                            if cast.vendetta("target") then
+                                if isChecked("Debug") then print("vendetta power use cd") end
+                            return true end
+                        end
+                        
+                        -- if (not solo or isDummy("target")) and not cd.garrote.exists() and (debuff.garrote.applied(GetObjectWithGUID(UnitGUID("target"))) <= 1 or debuff.garrote.remain() <= 5.4) and cast.able.vanish() and not debuff.garrote.exsang(GetObjectWithGUID(UnitGUID("target"))) then 
+                        --     if gcd >= 0.2 then ChatOverlay("Pooling gcd For vanish") return true end
+                        --     if isChecked("Debug") then print("vanish cd exsa") end
+                        --     if cast.vanish() then 
+                        --         if actionList_Stealthed() then return true end
+                        --     end
+                        -- end
+
+                        if debuff.garrote.remain() >= 5.4 and debuff.rupture.remain() >= 4 + (4 * comboMax) and (debuff.vendetta.exists() or cd.vendetta.remain() >=5) then
+                                if isChecked("Galecaller") then
+                                    -- use_item,name=galecallers_boon,if=cooldown.vendetta.remains<=1&(!talent.subterfuge.enabled|dot.garrote.pmultiplier>1)|cooldown.vendetta.remains>45
+                                    if canUseItem(13) and hasEquiped(159614, 13) then
+                                        useItem(13)
+                                    end
+                                    if canUseItem(14) and hasEquiped(159614, 14) then
+                                        useItem(14)
+                                    end
+                                end
+                            if cast.exsanguinate("target") then
+                                if isChecked("Debug") then print("exsa cd") end
+                            return true end
+                        end
+
+                        if cast.able.vendetta("target") then
+                                if isChecked("Trinkets") then
+                                    if canUseItem(13) then
+                                        useItem(13)
+                                    end
+                                    if canUseItem(14) then
+                                        useItem(14)
+                                    end
+                                end
+                            if cast.vendetta("target") then
+                                if isChecked("Debug") then print("vendetta cd") end
+                            return true end
+                        end
+
+                        if cd.vendetta.remain() >= 5 and cd.exsanguinate.remain() >= 5 then
+                            toggle("Special",2)
+                        end
+                    end
+
+                    if talent.toxicBlade then
+
+                        if cast.able.vendetta() then
+                                if isChecked("Trinkets") then
+                                    if canUseItem(13) then
+                                        useItem(13)
+                                    end
+                                    if canUseItem(14) then
+                                        useItem(14)
+                                    end
+                                end
+                            if isChecked("Debug") then print("vendetta tb talent cd") end
+                            if cast.vendetta("target") then return true end
+                        end
+
+                        if cast.able.toxicBlade() then
+                            if isChecked("Debug") then print("tb cd") end
+                            if cast.toxicBlade() then return true end
+                        end
+
+                        if (not solo or isDummy("target")) and not cd.garrote.exists() and (debuff.garrote.applied(GetObjectWithGUID(UnitGUID("target"))) <= 1 or debuff.garrote.remain() <= 5.4) and cast.able.vanish() then 
+                            if gcd >= 0.5 then ChatOverlay("Pooling gcd For vanish") return true end
+                            if power <= 70 then return true end
+                            if isChecked("Debug") then print("vanish tb cd") end
+                            if cast.vanish() then 
+                                if actionList_Stealthed() then return end
+                            end
+                        end
+
+                        if cd.vanish.remain() >= 5 and cd.vendetta.remain() >= 5 and cd.toxicBlade.remain() >= 5 then
+                            toggle("Special",2)
+                        end
+                    end
+                end
             end
             return true
           end

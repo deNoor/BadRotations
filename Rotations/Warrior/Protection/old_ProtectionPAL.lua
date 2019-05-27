@@ -265,7 +265,7 @@ local function runRotation()
 
         --Healthston
         if isChecked("Healthstone") and getHP("player") <= getValue("Healthstone") and inCombat then
-          if canUse(5512) then
+          if canUseItem(5512) then
             useItem(5512)
           end
         end
@@ -611,7 +611,7 @@ local function runRotation()
     end -- Pause
   end -- End Timer
 end -- End runRotation
-local id = 73 -- Change to the spec id profile is for.
+local id = 0 --73 -- Change to the spec id profile is for.
 if br.rotations[id] == nil then
   br.rotations[id] = {}
 end

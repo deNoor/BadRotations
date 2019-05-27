@@ -1,7 +1,5 @@
 local rotationName = "Laksmackt" -- Change to name of profile listed in options drop down
 
---[[Originally by Fengshen - all credit should go to him]]
-
 ---------------
 --- Toggles ---
 ---------------
@@ -34,7 +32,9 @@ local function createToggles()
   CreateButton("Cleanse", 4, 0)
   GlimmerModes = {
     [1] = { mode = "On", value = 1, overlay = "Glimmer mode", tip = "Glimmer on", highlight = 0, icon = 287280 },
-    [2] = { mode = "Off", value = 2, overlay = "Normal", tip = "Glimmer off", highlight = 0, icon = br.player.spell.holyShock }
+    [2] = { mode = "Off", value = 2, overlay = "Normal", tip = "Glimmer off", highlight = 0, icon = br.player.spell.holyShock },
+    [3] = { mode = "Tank", value = 3, overlay = "Normal", tip = "Glimmer on tank", highlight = 0, icon = 278573 }
+
   };
   CreateButton("Glimmer", 5, 0)
   -- DPS
@@ -86,9 +86,6 @@ local function createOptions()
     br.ui:checkSectionState(section)
     -- Raid
     section = br.ui:createSection(br.ui.window.profile, "Raid")
-    br.ui:createCheckbox(section, "Glimmer mode")
-    br.ui:createCheckbox(section, "Glimmer mode - ooc")
-    --br.ui:createSpinner(section, "Promise of Power", 8, 0, 100, 1, "", "|cffFFFFFFPower Stacks Before Cleanse", true)
     -- Mastery bonus
     br.ui:createCheckbox(section, "Mastery bonus", "|cff15FF00Give priority to the nearest player...(Only Raid)")
     -- Pre-Pull Timer
@@ -96,13 +93,19 @@ local function createOptions()
     br.ui:checkSectionState(section)
 
     section = br.ui:createSection(br.ui.window.profile, "M+ Settings")
-
     -- m+ Rot
     br.ui:createSpinner(section, "Necrotic Rot", 40, 0, 100, 1, "", "|cffFFFFFFNecrotic Rot Stacks does not healing the unit", true)
-    br.ui:createSpinner(section, "Reaping", 20, 0, 100, 1, "", "|cffFFFFFFReap Stacks Before Cleanse", true)
+    --br.ui:createSpinner(section, "Reaping", 20, 0, 100, 1, "", "|cffFFFFFFReap Stacks Before Cleanse", true)
     br.ui:createCheckbox(section, "Grievous Wounds", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFGrievousWound|cffFFBB00.", 1)
-    br.ui:createSpinner(section, "Bursting", 1, 0, 10, 1, "", "|cffFFFFFFBurst Targets")
-    br.ui:createCheckbox(section, "Choking Waters", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFBubble from choking water|cffFFBB00.", 1)
+    br.ui:createSpinner(section, "Bursting", 1, 0, 10, 3, "", "|cffFFFFFFBurst Targets")
+    br.ui:createCheckbox(section, "Siege - Choking Waters", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFBubble from choking water|cffFFBB00.", 1)
+    br.ui:createCheckbox(section, "Freehold - pig", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFCatches pig in Freehold|cffFFBB00.", 1)
+    br.ui:createCheckbox(section, "Freehold - Blackout Barrel", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFBubble blacout barrel|cffFFBB00.", 1)
+    br.ui:createCheckbox(section, "Atal - Devour", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFBubble Devour target|cffFFBB00.", 1)
+    br.ui:createCheckbox(section, "Motherload - Stun jockeys", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFBubble Devour target|cffFFBB00.", 1)
+    br.ui:createCheckbox(section, "Tol Dagor - Deadeye", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFBubble Devour target|cffFFBB00.", 1)
+    br.ui:createCheckbox(section, "Waycrest - jagged Nettles", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFBubble Nettles target|cffFFBB00.", 1)
+    br.ui:createCheckbox(section, "Shrine - Dispel Whisper of Power", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFBubble Devour target|cffFFBB00.", 0)
     br.ui:checkSectionState(section)
     -------------------------
     ------ DEFENSIVES -------
@@ -140,6 +143,8 @@ local function createOptions()
     br.ui:createCheckbox(section, "Hammer of Justice")
     -- Blinding Light
     br.ui:createCheckbox(section, "Blinding Light")
+    br.ui:createCheckbox(section, "Repentance as Interrupt")
+
     -- Interrupt Percentage
     br.ui:createSpinner(section, "InterruptAt", 95, 0, 95, 5, "", "|cffFFBB00Cast Percentage to use at.")
     br.ui:checkSectionState(section)
@@ -303,6 +308,10 @@ local function runRotation()
   local racial = br.player.getRacial()
   local traits = br.player.traits
   local moving = isMoving("player")
+  local BleedFriend = nil
+  local BleedFriendCount = 0
+  local BleedStack = 0
+
   -------------
   -- Raid
   ------------
@@ -351,7 +360,7 @@ local function runRotation()
   enemies.get(30)
   enemies.get(40)
   friends.yards40 = getAllies("player", 40 * master_coff)
-
+  local CC_CreatureTypeList = { "Humanoid", "Demon", "Undead", "Dragonkin", "Giant" }
   local StunsBlackList = {
     -- Atal'Dazar
     [87318] = "Dazar'ai Colossus",
@@ -504,7 +513,7 @@ local function runRotation()
     for i = 1, #br.friend do
       if UnitInRange(br.friend[i].unit) then
         local lowHealthCandidates = getUnitsToHealAround(br.friend[i].unit, 30, getValue("Beacon of Virtue"), #br.friend)
-        if (BOV ~= nil and isCastingSpell(spell.flashOfLight)) or (#lowHealthCandidates >= getValue("BoV Targets") and isCastingSpell(spell.flashOfLight)) or
+        if ((BOV ~= nil or BleedFriendCount >= 2) and isCastingSpell(spell.flashOfLight)) or ((#lowHealthCandidates >= getValue("BoV Targets") or BleedFriendCount >= 2) and isCastingSpell(spell.flashOfLight)) or
                 (#lowHealthCandidates >= getValue("BoV Targets") and moving and cast.able.beaconOfVirtue() and getSpellCD(20473) < gcd) then
           if CastSpellByName(GetSpellInfo(200025), br.friend[i].unit) then
             return
@@ -513,28 +522,7 @@ local function runRotation()
       end
     end
   end
-  -- Jagged Nettles and Dessication logic
-  if inInstance and inCombat then
-    for i = 1, #br.friend do
-      if getDebuffRemain(br.friend[i].unit, 260741) ~= 0 or getDebuffRemain(br.friend[i].unit, 267626) ~= 0 then
-        if getSpellCD(20473) == 0 then
-          if cast.holyShock(br.friend[i].unit) then
-            return true
-          end
-        end
-        if php >= getOptionValue("LotM player HP limit") and not GetUnitIsUnit(br.friend[i].unit, "player") then
-          if cast.lightOfTheMartyr(br.friend[i].unit) then
-            return true
-          end
-        end
-        if getSpellCD(20473) ~= 0 then
-          if cast.flashOfLight(br.friend[i].unit) then
-            return true
-          end
-        end
-      end
-    end
-  end
+
   -- Temple of Sethraliss
   if GetObjectID("target") == 133392 and inCombat then
     if getHP("target") < 100 and getBuffRemain("target", 274148) == 0 then
@@ -620,7 +608,7 @@ local function runRotation()
       end
     end
     -- Unstable Temporal Time Shifter
-    if isChecked("Unstable Temporal Time Shifter") and canUse(158379) and not moving and inCombat then
+    if isChecked("Unstable Temporal Time Shifter") and canUseItem(158379) and not moving and inCombat then
       if getOptionValue("Unstable Temporal Time Shifter") == 1
               and UnitIsPlayer("target") and UnitIsDeadOrGhost("target") and GetUnitIsFriend("target", "player") then
         UseItemByName(158379, "target")
@@ -652,7 +640,7 @@ local function runRotation()
     --166798 --"Crackling Tourmaline"
     --166801 -- "Saphire of Brilliance"  buff 290365
 
-    if hasItem(166798) and canUse(166798) and not buff.cracklingTourmaline.exists("player") then
+    if hasItem(166798) and canUseItem(166798) and not buff.cracklingTourmaline.exists("player") then
       useItem(166798);
       return true
     end
@@ -663,7 +651,7 @@ local function runRotation()
     -- Pre-Pull Timer
     if isChecked("Pre-Pull Timer") then
       if pullTimer <= getOptionValue("Pre-Pull Timer") then
-        if canUse(142117) and not buff.prolongedPower.exists() then
+        if canUseItem(142117) and not buff.prolongedPower.exists() then
           useItem(142117);
           return true
         end
@@ -677,19 +665,19 @@ local function runRotation()
     if useDefensive() then
 
       --engineering belt / plate pants
-      if isChecked("Engineering Belt") and php <= getOptionValue("Engineering Belt") and canUse(6) then
+      if isChecked("Engineering Belt") and php <= getOptionValue("Engineering Belt") and canUseItem(6) then
         useItem(6)
       end
 
       --Healthstone / Heathpots :  156634 == Silas Vial of Continuous curing / 5512 == warlock health stones
       if isChecked("Pot/Stoned") and php <= getValue("Pot/Stoned") and (hasHealthPot() or hasItem(5512) or hasItem(156634)) then
-        if canUse(166799) then
+        if canUseItem(166799) then
           useItem(166799)
-        elseif canUse(5512) then
+        elseif canUseItem(5512) then
           useItem(5512)
-        elseif canUse(156634) then
+        elseif canUseItem(156634) then
           useItem(156634)
-        elseif canUse(getHealthPot()) then
+        elseif canUseItem(getHealthPot()) then
           useItem(getHealthPot())
         end
       end
@@ -701,7 +689,7 @@ local function runRotation()
       end
       -- Divine Shield
       if isChecked("Divine Shield") and cast.able.divineShield() then
-        if (php <= getOptionValue("Divine Shield") or (isChecked("Choking Waters") and UnitDebuffID("player", 272571))) and not UnitDebuffID("player", 25771) then
+        if (php <= getOptionValue("Divine Shield") or (isChecked("Siege - Choking Waters") and UnitDebuffID("player", 272571)) or (isChecked("Atal - Devour") and UnitDebuffID("player", 255421))) and not UnitDebuffID("player", 25771) then
           if cast.divineShield() then
             return true
           end
@@ -751,7 +739,7 @@ local function runRotation()
           if getDebuffRemain(br.friend[i].unit, 268896) ~= 0 or getDebuffRemain(br.friend[i].unit, 264526) ~= 0 or getDebuffRemain(br.friend[i].unit, 258058) ~= 0 then
             blessingOfFreedomCase = br.friend[i].unit
           end
-          if getDebuffRemain(br.friend[i].unit, 255421) ~= 0 or getDebuffRemain(br.friend[i].unit, 256038) ~= 0 or getDebuffRemain(br.friend[i].unit, 260741) ~= 0 or getDebuffRemain(br.friend[i].unit, 258875) ~= 0 then
+          if (isChecked("Atal - Devour") and getDebuffRemain(br.friend[i].unit, 255421) ~= 0 and br.friend[i].unit ~= "player") or (isChecked("Tol Dagor - Deadeye") and getDebuffRemain(br.friend[i].unit, 256038) ~= 0 and br.friend[i].unit ~= "player") or (isChecked("Waycrest - jagged Nettles") and getDebuffRemain(br.friend[i].unit, 260741) ~= 0) or (isChecked("Freehold - Blackout Barrel") and getDebuffRemain(br.friend[i].unit, 258875) ~= 0) then
             blessingOfProtectionCase = br.friend[i].unit
           end
           if UnitIsCharmed(br.friend[i].unit) and getDebuffRemain(br.friend[i].unit, 272407) == 0 and br.friend[i].distance <= 10 then
@@ -802,15 +790,18 @@ local function runRotation()
         end
       end
     end
-  end
 
+    if isChecked("Freehold - pig") and GetMinimapZoneText() == "Ring of Booty" then
+      bossHelper()
+    end
+  end
 
   ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   -- Cleanse ----------- Cleanse ----------- Cleanse ----------- Cleanse ----------- Cleanse ----------- Cleanse ----------- Cleanse ----------- Cleanse ----------- Cleanse -------
   ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   local function Cleanse()
     -- Cleanse
-    if br.player.mode.cleanse == 1 and cast.able.cleanse() then
+    if br.player.mode.cleanse == 1 and cast.able.cleanse() and not cast.last.cleanse() then
       for i = 1, #friends.yards40 do
 
         --[[ DEBUG
@@ -818,7 +809,7 @@ local function runRotation()
           Print("Stacks: " ..getDebuffStacks(br.friend[i].unit, 288388) .." Threshold: " .. getValue("Reaping"))
         end]]
         -- 275014=putrid-waters, 252781= unstable-hex, 261440=virulent-pathogen, 288388=reap-soul, 282562-promises-of-power
-        --[[ removing as support moved into HE system]]
+        --[[ removing as support moved into HE system
 
         if inInstance and (getDebuffRemain(br.friend[i].unit, 275014) >= 2 or getDebuffRemain(br.friend[i].unit, 261440) >= 2) and #getAllies(br.friend[i].unit, 6) < 2
                 or (getDebuffStacks(br.friend[i].unit, 288388) >= getValue("Reaping") or (not inCombat and getDebuffStacks(br.friend[i].unit, 288388) > 0))
@@ -835,16 +826,18 @@ local function runRotation()
               return true
             end
           end
+        end]]
+
+        if canDispel(br.friend[i].unit, spell.cleanse) then
+          if cast.cleanse(br.friend[i].unit) then
+            return true
+          end
         end
-        --[[
-                if canDispel(br.friend[i].unit, spell.cleanse) then
-                  if cast.cleanse(br.friend[i].unit) then
-                    return true
-                  end
-                end
-              ]]
-
-
+        if isChecked("Shrine - Dispel Whisper of Power") and getDebuffStacks("player", 267034) < 0 then
+          if cast.cleanse("player") then
+            return true
+          end
+        end
       end
     end
   end
@@ -866,10 +859,24 @@ local function runRotation()
             end
           end
           -- Hammer of Justice
-          if isChecked("Hammer of Justice") and cast.able.hammerOfJustice() and getBuffRemain(thisUnit, 226510) == 0 then
+          if isChecked("Hammer of Justice") and cast.able.hammerOfJustice() and getBuffRemain(thisUnit, 226510) == 0
+                  and (thisUnit == 130488 and isChecked("Motherload - Stun jockeys") or thisUnit ~= 130488) then
             if cast.hammerOfJustice(thisUnit) then
               return true
             end
+          end
+        end
+      end
+    end
+    -- Repentance as interrupt
+    if useInterrupts() and talent.repentance and cast.able.repentance() and isChecked("Repentance as Interrupt") then
+      for i = 1, #enemies.yards30 do
+        thisUnit = enemies.yards30[i]
+        if canInterrupt(thisUnit, 99) and getCastTimeRemain(thisUnit) > getCastTime(spell.repentance) and StunsBlackList[GetObjectID(thisUnit)] == nil and not isBoss(thisUnit)
+                and UnitCastingInfo(thisUnit) ~= GetSpellInfo(257899) and UnitCastingInfo(thisUnit) ~= GetSpellInfo(258150) and UnitCastingInfo(thisUnit) ~= GetSpellInfo(252923)
+                and UnitCreatureType(thisUnit) == CC_CreatureTypeList[i] then
+          if cast.repentance(thisUnit) then
+            return true
           end
         end
       end
@@ -916,7 +923,7 @@ local function runRotation()
         return true
       end
     end
-    if beaconOfLightTANK ~= nil then
+    if beaconOfLightTANK ~= nil and not cast.last.beaconOfLight() then
       if cast.beaconOfLight(beaconOfLightTANK) then
         return true
       end
@@ -947,7 +954,6 @@ local function runRotation()
     local blessingOfSacrificeDAMAGER = nil
     local layOnHandsTarget = nil
     local burst = nil
-    local burst = nil
 
     if isChecked("Group Avenger w/ Wrath") then
       if buff.avengingWrath.exists() or buff.avengingCrusader.exists() then
@@ -958,7 +964,7 @@ local function runRotation()
     end
 
     --stat gem from crown
-    if hasItem(166801) and canUse(166801) and not buff.saphireofBrilliance.exists("player") then
+    if hasItem(166801) and canUseItem(166801) and not buff.saphireofBrilliance.exists("player") then
       useItem(166801)
       return true
     end
@@ -1072,7 +1078,7 @@ local function runRotation()
       end
     end
     -- Trinkets
-    if isChecked("Trinket 1") and canUse(13) then
+    if isChecked("Trinket 1") and canUseItem(13) then
       if getOptionValue("Trinket 1 Mode") == 1 then
         if getLowAllies(getValue("Trinket 1")) >= getValue("Min Trinket 1 Targets") then
           useItem(13)
@@ -1116,7 +1122,7 @@ local function runRotation()
         end
       end
     end
-    if isChecked("Trinket 2") and canUse(14) then
+    if isChecked("Trinket 2") and canUseItem(14) then
       if getOptionValue("Trinket 2 Mode") == 1 then
         if getLowAllies(getValue("Trinket 2")) >= getValue("Min Trinket 2 Targets") then
           useItem(14)
@@ -1395,6 +1401,50 @@ local function runRotation()
   --topPriority ------ topPriority ------topPriority ------ topPriority ------ topPriority ------ topPriority ------ topPriority ------ topPriority ------ topPriority ----
   ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   local function topPriority()
+
+
+    --Grievous Wounds
+    if isChecked("Grievous Wounds") then
+      for i = 1, #br.friend do
+        if br.friend[i].hp < 100 and UnitInRange(br.friend[i].unit) or GetUnitIsUnit(br.friend[i].unit, "player") then
+          local CurrentBleedstack = getDebuffStacks(br.friend[i].unit, 240559)
+          if getDebuffStacks(br.friend[i].unit, 240559) > 0 then
+            BleedFriendCount = BleedFriendCount + 1
+          end
+          if CurrentBleedstack > BleedStack then
+            BleedStack = CurrentBleedstack
+            BleedFriend = br.friend[i]
+            --debug stuff
+            --Print("Griev Debug Target: " .. BleedFriend.unit .. " Stacks: " ..CurrentBleedstack .. " HP: " .. BleedFriend.hp)
+          end
+        end
+      end
+    end
+
+    -- Jagged Nettles and Dessication logic
+    if inInstance and inCombat and (GetMinimapZoneText() == "Ballroom" or GetMinimapZoneText() == "Chamber of Eternal Preservation") then
+      for i = 1, #br.friend do
+        if getDebuffRemain(br.friend[i].unit, 260741) ~= 0 or getDebuffRemain(br.friend[i].unit, 267626) ~= 0 then
+          if getSpellCD(20473) == 0 then
+            if cast.holyShock(br.friend[i].unit) then
+              return true
+            end
+          end
+          if php >= getOptionValue("LotM player HP limit") and not GetUnitIsUnit(br.friend[i].unit, "player") then
+            if cast.lightOfTheMartyr(br.friend[i].unit) then
+              return true
+            end
+          end
+          if getSpellCD(20473) ~= 0 then
+            if cast.flashOfLight(br.friend[i].unit) then
+              return true
+            end
+          end
+        end
+      end
+    end
+
+
     --Avenging Crusader (216331)  UnitBuffID("player", 216331)
     if buff.avengingCrusader.exists("player") and getFacing("player", "target") then
       if mode.DPS == 1 and
@@ -1432,7 +1482,7 @@ local function runRotation()
     if isChecked("Crusader Strike") and mode.Glimmer ~= 1 and talent.crusadersMight and cast.able.crusaderStrike()
             and lowest.hp > getValue("Critical HP")
             and getFacing("player", units.dyn5) then
-      if (getSpellCD(20473) > (gcd + 1.5) or getSpellCD(85222) > (gcd + 1.5)) then
+      if (getSpellCD(20473) > (gcd + 1.5) or getSpellCD(85222) > (gcd + 1.5)) or (charges.crusaderStrike.frac() >= 1.75 and (getSpellCD(20473) > gcd or getSpellCD(85222) > gcd)) then
         if cast.crusaderStrike(units.dyn5) then
           return true
         end
@@ -1441,7 +1491,16 @@ local function runRotation()
   end
 
   local function glimmer()
+
     --Glimmer support
+
+    if mode.Glimmer == 3 and (inInstance or inRaid) and #tanks > 0 then
+      if not buff.glimmerOfLight.exists(tanks[1].unit) and not UnitBuffID(tanks[1].unit, 115191) then
+        if cast.holyShock(tanks[1].unit) then
+        end
+      end
+    end
+
     if mode.Glimmer == 1 and (inInstance or inRaid) and #br.friend > 1 then
       if getSpellCD(20473) == 0 then
         --critical first
@@ -1513,14 +1572,13 @@ local function runRotation()
           end
         end
       end
-      if talent.crusadersMight and lowest.hp > getValue("Critical HP") and (getSpellCD(20473) > (gcd + 1.5) or getSpellCD(85222) > (gcd + 1.5)) and getFacing("player", units.dyn5) then
+      if talent.crusadersMight and lowest.hp > getValue("Critical HP") and (getSpellCD(20473) > (gcd + 1.5) or getSpellCD(85222) > (gcd + 1.5)) or (charges.crusaderStrike.frac() >= 1.75 and (getSpellCD(20473) > gcd or getSpellCD(85222) > gcd)) and getFacing("player", units.dyn5) then
         if cast.crusaderStrike(units.dyn5) then
           return true
         end
       end
     end
   end
-
   local function SingleTarget()
     local holyshocktarget = nil
     local folTarget = nil
@@ -1549,9 +1607,7 @@ local function runRotation()
     local lightOfTheMartyrM20 = nil
     local lightOfTheMartyrM30 = nil
     local lightOfTheMartyrM40 = nil
-    local BleedStack = 0
-    local BleedFriend = nil
-    local BleedFriendCount = 0
+
 
 
     --and getDebuffStacks(br.friend[i].unit, 209858) < getValue("Necrotic Rot")
@@ -1711,11 +1767,6 @@ local function runRotation()
     if BleedFriend ~= nil and BleedFriend ~= player then
       if cast.able.lightOfTheMartyr() and php >= getOptionValue("LotM player HP limit") and BleedFriend.hp > 70 and getDebuffStacks("player", 267034) < 2 then
         if cast.lightOfTheMartyr(BleedFriend.unit) then
-          return true
-        end
-      end
-      if talent.beaconOfVirtue and cast.able.beaconOfVirtue() and BleedFriendCount >= 2 then
-        if cast.beaconOfVirtue(BleedFriend.unit) then
           return true
         end
       end

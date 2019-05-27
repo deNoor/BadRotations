@@ -88,6 +88,7 @@ local function createOptions()
             -- br.ui:createDropdown(section, "Auto Summon", {"Pet 1","Pet 2","Pet 3","Pet 4","Pet 5","No Pet"}, 1, "Select the pet you want to use")
             -- Auto Attack/Passive
             br.ui:createCheckbox(section, "Auto Attack/Passive")
+            br.ui:createDropdownWithout(section, "Pet Target", {"Dynamic Unit", "Only Target", "Any Unit"},1,"Select how you want pet to acquire targets.")
             -- Auto Growl
             br.ui:createCheckbox(section, "Auto Growl")
             -- Mend Pet
@@ -187,7 +188,7 @@ local item
 local level
 local lowestHP
 local mode
---local opener
+local opener
 local php
 local potion
 local race
@@ -198,8 +199,8 @@ local traits
 local ttm
 local units
 local use
-
 -- General Locals
+local actionList
 local critChance
 local flying
 local hastar
@@ -232,7 +233,7 @@ end
 --------------------
 --- Action Lists ---
 --------------------
-local actionList = {}
+actionList = {}
 -- Action List - Pet Management
 actionList.PetManagement = function()
     local petActive = IsPetActive()
@@ -282,11 +283,14 @@ actionList.PetManagement = function()
         end
         -- Pet Attack / retreat
         if (not UnitExists("pettarget") or not validTarget) and (inCombat or petCombat) and not buff.playDead.exists("pet") then
-            for i=1, #enemies.yards40 do
-                local thisUnit = enemies.yards40[i]
-                if isValidUnit(thisUnit) or isDummy() then
-                    PetAttack(thisUnit)
-                    break
+            if getOptionValue("Pet Target") == 1 then
+                PetAttack(units.dyn40)
+            elseif getOptionValue("Pet Target") == 2 then
+                PetAttack("target")
+            elseif getOptionValue("Pet Target") == 3 then
+                for i=1, #enemies.yards40 do
+                    local thisUnit = enemies.yards40[i]
+                    if (isValidUnit(thisUnit) or isDummy()) then PetAttack(thisUnit); break end
                 end
             end
         elseif (not inCombat or (inCombat and not validTarget and not isDummy())) and IsPetAttackActive() then
@@ -354,7 +358,7 @@ actionList.PetManagement = function()
             if cast.able.growl() then
                 for i = 1, #enemies.yards40 do
                     local thisUnit = enemies.yards40[i]
-                    if not isTanking(thisUnit) then
+                    if isTanking(thisUnit) then
                         if cast.growl(thisUnit) then return end
                     end
                 end
@@ -401,21 +405,27 @@ actionList.Extras = function()
     -- Misdirection
     if mode.misdirection == 1 then
         if isValidUnit("target") then
+            local misdirectUnit = "pet"
             if getOptionValue("Misdirection") == 1 and (inInstance or inRaid) then
                 for i = 1, #br.friend do
                     local thisFriend = br.friend[i].unit
                     if (br.friend[i].role == "TANK" or UnitGroupRolesAssigned(thisFriend) == "TANK")
                         and UnitAffectingCombat(thisFriend) and not UnitIsDeadOrGhost(thisFriend)
                     then
-                        if cast.misdirection(thisFriend) then return end
+                        misdirectUnit = thisFriend
+                        break
                     end
                 end
-            elseif getOptionValue("Misdirection") == 2 and GetUnitExists("focus")
-                and not UnitIsDeadOrGhost("focus") and GetUnitIsFriend("focus","player")
+            end
+            if getOptionValue("Misdirection") == 2 and not UnitIsDeadOrGhost("focus")
+                and GetUnitIsFriend("focus","player")
             then
-                if cast.misdirection("focus") then return end
-            elseif getOptionValue("Misdirection") == 3 and GetUnitExists("pet") and not UnitIsDeadOrGhost("pet") then
-                if cast.misdirection("pet") then return end
+                misdirectUnit = "focus"
+            end
+            if GetUnitExists(misdirectUnit) and UnitAffectingCombat(misdirectUnit)
+                and not UnitIsDeadOrGhost(misdirectUnit) and GetUnitIsFriend(misdirectUnit,"player")
+            then
+                if cast.misdirection(misdirectUnit) then return end
             end
         end
     end
@@ -425,12 +435,12 @@ end -- End Action List - Extras
 actionList.Defensive = function()
     if useDefensive() then
         -- Pot/Stoned
-        if isChecked("Pot/Stoned") and (use.able.healthstone() or canUse(healPot))
+        if isChecked("Pot/Stoned") and (use.able.healthstone() or canUseItem(healPot))
             and php <= getOptionValue("Pot/Stoned") and inCombat and (hasHealthPot() or has.healthstone())
         then
             if use.able.healthstone() then
                 use.healthstone()
-            elseif canUse(healPot) then
+            elseif canUseItem(healPot) then
                 useItem(healPot)
             end
         end
@@ -502,10 +512,10 @@ actionList.Cooldowns = function()
     if useCDs() then
         -- Trinkets
         if buff.aspectOfTheWild.exists() then 
-            if (getOptionValue("Trinkets") == 1 or getOptionValue("Trinkets") == 3) and canUse(13) then
+            if (getOptionValue("Trinkets") == 1 or getOptionValue("Trinkets") == 3) and canUseItem(13) then
                 useItem(13)
             end
-            if (getOptionValue("Trinkets") == 2 or getOptionValue("Trinkets") == 3) and canUse(14) then
+            if (getOptionValue("Trinkets") == 2 or getOptionValue("Trinkets") == 3) and canUseItem(14) then
                 useItem(14)
             end
             -- Racial: Orc Blood Fury | Troll Berserking | Blood Elf Arcane Torrent
@@ -903,17 +913,17 @@ actionList.PreCombat = function()
     if not inCombat and not (IsFlying() or IsMounted()) then
         -- Flask / Crystal
         -- flask,type=flask_of_the_seventh_demon
-        if getOptionValue("Elixir") == 1 and inRaid and not buff.flaskOfTheSeventhDemon.exists() and canUse(item.flaskOfTheSeventhDemon) then
+        if getOptionValue("Elixir") == 1 and inRaid and not buff.flaskOfTheSeventhDemon.exists() and canUseItem(item.flaskOfTheSeventhDemon) then
             if buff.whispersOfInsanity.exists() then buff.whispersOfInsanity.cancel() end
             if buff.felFocus.exists() then buff.felFocus.cancel() end
             if use.flaskOfTheSeventhDemon() then return true end
         end
-        if getOptionValue("Elixir") == 2 and not buff.felFocus.exists() and canUse(item.repurposedFelFocuser) then
+        if getOptionValue("Elixir") == 2 and not buff.felFocus.exists() and canUseItem(item.repurposedFelFocuser) then
             if buff.flaskOfTheSeventhDemon.exists() then buff.flaskOfTheSeventhDemon.cancel() end
             if buff.whispersOfInsanity.exists() then buff.whispersOfInsanity.cancel() end
             if use.repurposedFelFocuser() then return true end
         end
-        if getOptionValue("Elixir") == 3 and not buff.whispersOfInsanity.exists() and canUse(item.oraliusWhisperingCrystal) then
+        if getOptionValue("Elixir") == 3 and not buff.whispersOfInsanity.exists() and canUseItem(item.oraliusWhisperingCrystal) then
             if buff.flaskOfTheSeventhDemon.exists() then buff.flaskOfTheSeventhDemon.cancel() end
             if buff.felFocus.exists() then buff.felFocus.cancel() end
             if use.oraliusWhisperingCrystal() then return true end
