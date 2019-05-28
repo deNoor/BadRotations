@@ -9,6 +9,7 @@ local forcekill = {
             [136330]=true, -- Soul Thorns Waycrest Manor
             [134388]=true -- A Knot of Snakes ToS
             }
+
 ---------------
 --- Toggles ---
 ---------------
@@ -71,6 +72,10 @@ end
 -- else 
     -- forpro = false
 -- end
+
+
+
+forpro = false
 
 
 
@@ -175,6 +180,7 @@ end
 local function runRotation()
     local profile = br.debug.cpu.rotation.profile
     local startTime = debugprofilestop()
+
     -- WriteFile("countvisible.txt", countvisible .. "\n", true)
     -- print(countvisible)
     -- countvisible = 0
@@ -235,6 +241,31 @@ local function runRotation()
         local units                                         = br.player.units
         local use                                           = br.player.use
         local lootDelay                                     = getOptionValue("LootDelay")
+        -- ToggleToValue("BladeFlurry", 1)
+        -- print(1)
+
+    
+    
+    -- print(checkDR(199804,"target"))
+    -- print(UnitClassification("target"))
+    if not UnitAffectingCombat("player") then
+        if not talent.markedForDeath then
+            buttonMFD:Hide()
+        else
+            buttonMFD:Show()
+        end
+        if not talent.killingSpree and not talent.bladeRush then
+            ToggleToValue("Tierseven", 2)
+            buttonTierseven:Hide()
+        else
+            buttonTierseven:Show()
+        end
+    end
+
+    local spread = false
+    if GetKeyState(0x10) then
+      spread = true
+    end
 
         
     
@@ -728,11 +759,11 @@ local function runRotation()
           
           if not stealth then
             -- Health Pot/Healthstone
-            if isChecked("Healing Potion/Healthstone") and (use.able.healthstone() or canUse(152494)) and php <= getOptionValue("Healing Potion/Healthstone") and inCombat and (hasItem(152494) or has.healthstone())
+            if isChecked("Healing Potion/Healthstone") and (use.able.healthstone() or canUseItem(152494)) and php <= getOptionValue("Healing Potion/Healthstone") and inCombat and (hasItem(152494) or has.healthstone())
             then
                 if use.able.healthstone() then
                     use.healthstone()
-                elseif canUse(152494) then
+                elseif canUseItem(152494) then
                     useItem(152494)
                 end
             end
@@ -755,7 +786,7 @@ local function runRotation()
               end
             end
             if isChecked("Engineer's Belt") and php <= getOptionValue("Engineer's Belt") and inCombat then
-                if canUse(6) then
+                if canUseItem(6) then
                     useItem(6)
                 end
             end
@@ -794,17 +825,17 @@ local function runRotation()
             --blood_fury
             --berserking
             --arcane_torrent,if=energy.deficit>40
-            if isChecked("Racial") and (race == "Orc" or race == "MagharOrc" or race == "DarkIronDwarf" or race == "Troll") then
+            if mode.special == 1 and isChecked("Racial") and (race == "Orc" or race == "MagharOrc" or race == "DarkIronDwarf" or race == "Troll") then
                 if cast.racial("player") then return true end
             end
 
             if mode.special == 1 and not buff.adrenalineRush.exists() and ttd("target") >= 10 then
                 if cast.adrenalineRush("player") then
                     if isChecked("Trinkets") then
-                        if canUse(13) then
+                        if canUseItem(13) then
                             useItem(13)
                         end
-                        if canUse(14) then
+                        if canUseItem(14) then
                             useItem(14)
                         end
                     end
@@ -845,7 +876,6 @@ local function runRotation()
                     end
                 end
             end
-            
             if stealthingRogue and (br.player.instance=="party" or br.player.instance=="raid" or isDummy("target")) and isChecked("Vanish") then
                 if cast.ambush("target") then end
             end
@@ -1061,7 +1091,7 @@ local function runRotation()
                         if cast.kick(thisUnit) then end
                     end
                 end
-                if isChecked("AutoGouge") and not cd.gouge.exists() and getFacing(unit, "player") then
+                if isChecked("AutoGouge") and not cd.gouge.exists() and getFacing(thisUnit, "player") then
                     if canInterruptshit(thisUnit, true , forpro, true) then
                         if cast.gouge(thisUnit) then return true end
                     end
