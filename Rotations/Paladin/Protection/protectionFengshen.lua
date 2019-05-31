@@ -909,7 +909,7 @@ local function runRotation()
 						end
 					end
 					-- Consecration
-					if isChecked("Consecration") and cast.able.consecration() and GetUnitExists(units.dyn5) and not buff.consecration.exists() then
+					if isChecked("Consecration") and cast.able.consecration() and GetUnitExists(units.dyn5) and not buff.consecration.exists() and not isMoving("player") then
 						if cast.consecration() then return end
 					end
 					-- Blessed Hammer
@@ -965,11 +965,11 @@ local function runRotation()
 					end
 					if isChecked("Consecration") and #enemies.yards8>=1 then
 					--actions+=/consecration,if=(cooldown.judgment.remains<=gcd&!talent.crusaders_judgment.enabled)|cooldown.avenger_shield.remains<=gcd&consecration.remains<gcd
-						if cast.able.consecration() and ((cd.judgment.remain()<=gcd and not talent.crusadersJudgment) or cd.avengersShield.remain()<=gcd and consecrationRemain<gcd) then
+						if cast.able.consecration() and ((cd.judgment.remain()<=gcd and not talent.crusadersJudgment) or cd.avengersShield.remain()<=gcd and consecrationRemain<gcd) and not isMoving("player") then
 							if cast.consecration() then return end
 						end
 					--actions+=/consecration,if=!talent.crusaders_judgment.enabled&consecration.remains<(cooldown.judgment.remains+cooldown.avengers_shield.remains)&consecration.remains<3*gcd
-						if cast.able.consecration() and (not talent.crusadersJudgment and consecrationRemain<(cd.judgment.remain()+cd.avengersShield.remain()) and consecrationRemain<3*gcd) then
+						if cast.able.consecration() and (not talent.crusadersJudgment and consecrationRemain<(cd.judgment.remain()+cd.avengersShield.remain()) and consecrationRemain<3*gcd) and not isMoving("player") then
 							if cast.consecration() then return end
 						end
 					end
