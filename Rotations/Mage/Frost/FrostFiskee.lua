@@ -551,7 +551,7 @@ local function runRotation()
             thisUnit = enemiesTable[i]
             local uX, uY, uZ = ObjectPosition(thisUnit)
             if isInside(uX, uY, nlX, nlY, nrX, nrY, frX, frY) and not TraceLine(x, y, z+2, uX, uY, uZ+2, 0x100010) then
-                if safe and not UnitAffectingCombat(thisUnit) then
+                if safe and not UnitAffectingCombat(thisUnit) and not isDummy(thisUnit) then
                     unitsInRect = 0
                     break
                 end            
@@ -567,7 +567,7 @@ local function runRotation()
             return false
         end
     end
-    
+
     --Clear last cast table ooc to avoid strange casts
     if not inCombat and #br.lastCast.tracker > 0 then
         wipe(br.lastCast.tracker)
@@ -1096,7 +1096,7 @@ local function runRotation()
                 return true 
             end
             if not pause(true) and targetUnit.calcHP > 0 and (targetUnit.facing or isChecked("Auto Facing")) then
-                if isChecked("Pet Management") and not talent.lonelyWinter and UnitIsVisible("pet") and not GetUnitIsUnit("pettarget", "target") and targetUnit and (not UnitCastingInfo("pet") or ((select(5, UnitCastingInfo("pet")) / 1000) - GetTime()) > 1.5) then
+                if isChecked("Pet Management") and not talent.lonelyWinter and UnitIsVisible("pet") and not GetUnitIsUnit("pettarget", "target") and targetUnit then
                     PetAttack()
                 end
                 if getOptionValue("APL Mode") == 1 then
