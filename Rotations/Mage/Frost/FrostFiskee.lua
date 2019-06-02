@@ -100,8 +100,10 @@ local function createOptions()
         br.ui:createCheckbox(section, "Potion")
         -- Pre Pot
         br.ui:createCheckbox(section, "Pre Pot", "|cffFFFFFF Requires Pre-Pull logic to be active")
-        -- Blizzard with CDs
+        -- AoE when using CD
         br.ui:createCheckbox(section, "Obey AoE units when using CDs", "|cffFFFFFF Use user AoE settings when using CDs")
+        -- CD ttd limit
+        br.ui:createSpinnerWithout(section, "CDs TTD Limit", 5, 1, 30, 1, "|cffFFFFFFMin. calculated time to die to use CDs.")
         br.ui:checkSectionState(section)
         -- Defensive Options
         section = br.ui:createSection(br.ui.window.profile, "Defensive")
@@ -245,7 +247,23 @@ local function runRotation()
         end
         return false
     end
-        
+
+    --Player cast remain
+    local playerCastRemain = 0
+    if UnitCastingInfo("player") then
+        playerCastRemain = (select(5, UnitCastingInfo("player")) / 1000) - GetTime()
+    end
+
+    -- Pet Stance
+    local function petFollowActive()
+        for i = 1, NUM_PET_ACTION_SLOTS do
+            local name, _, _,isActive = GetPetActionInfo(i)
+            if isActive and name == "PET_ACTION_FOLLOW" then
+                return true
+            end
+        end
+        return false
+    end       
 
     -- Ice Floes
     if moving and talent.iceFloes and buff.iceFloes.exists() then
@@ -360,13 +378,16 @@ local function runRotation()
 
     --Spell steal
     local doNotSteal = {
-        [1] = "test"
+        [273432] = "Bound By Shadow(Uldir)",
+        [269935] = "Bound By Shadow(KR)"
     }
     local function spellstealCheck(unit)
         local i = 1
         local buffName, _, _, _, duration, expirationTime, _, isStealable, _, spellId = UnitBuff(unit, i)
         while buffName do
-            if isStealable and (GetTime() - (expirationTime - duration)) > dispelDelay and not doNotSteal[spellId] then
+            if doNotSteal[spellId] then
+                return false
+            elseif isStealable and (GetTime() - (expirationTime - duration)) > dispelDelay then
                 return true
             end
             i = i + 1
@@ -628,6 +649,10 @@ local function runRotation()
                 return true
             end
         end
+        --Pet assist
+        if isChecked("Pet Management") and UnitIsVisible("pet") and not petFollowActive() and (not inCombat or getDistance("target", "pet") > 40) then
+            PetFollow()
+        end
         --Burn Units
         local burnUnits = {
             [120651] = true, -- Explosive
@@ -652,7 +677,7 @@ local function runRotation()
 
     local function actionList_Defensive()
         if useDefensive() then
-            if isChecked("Ice Block") and php <= getOptionValue("Ice Block") then
+            if isChecked("Ice Block") and php <= getOptionValue("Ice Block") and cd.iceBlock.remain() <= gcd then
                 if UnitCastingInfo("player") then
                     SpellStopCasting()
                 end
@@ -710,7 +735,7 @@ local function runRotation()
     end
 
     local function actionList_Cooldowns()
-        if useCDs() and not moving then
+        if useCDs() and not moving and targetUnit.ttd >= getOptionValue("CDs TTD Limit") then
             -- actions.cooldowns=icy_veins
             if cast.icyVeins("player") then return true end
             -- actions.cooldowns+=/potion,if=prev_gcd.1.icy_veins|target.time_to_die<30
@@ -814,24 +839,26 @@ local function runRotation()
         end
         -- # Without GS, Ebonbolt is always shattered. With GS, Ebonbolt is shattered if it would waste Brain Freeze charge (i.e. when the mage starts casting Ebonbolt with Brain Freeze active) or when below 4 Icicles (if Ebonbolt is cast when the mage has 4-5 Icicles, it's better to use the Brain Freeze from it on Glacial Spike).
         -- actions.single+=/flurry,if=talent.ebonbolt.enabled&prev_gcd.1.ebonbolt&(!talent.glacial_spike.enabled|buff.icicles.stack<4|buff.brain_freeze.react)
-        if talent.ebonbolt and cast.last.ebonbolt() and (not talent.glacialSpike or iciclesStack < 4 or targetUnit.ttd < 4) then
+        if talent.ebonbolt and cast.last.ebonbolt() and (not talent.glacialSpike or iciclesStack < 4 or targetUnit.ttd < 3) then
             if cast.flurry("target") then return true end
         end
         -- # Glacial Spike is always shattered.
         -- actions.single+=/flurry,if=talent.glacial_spike.enabled&prev_gcd.1.glacial_spike&buff.brain_freeze.react
-        if talent.glacialSpike and bfExists and not playerCasting and (cast.last.glacialSpike() or targetUnit.ttd < 4) then
+        if talent.glacialSpike and bfExists and (cast.last.glacialSpike() or targetUnit.ttd < 3) then
             if cast.flurry("target") then return true end
         end
         -- # Without GS, the mage just tries to shatter as many Frostbolts as possible. With GS, the mage only shatters Frostbolt that would put them at 1-3 Icicle stacks. Difference between shattering Frostbolt with 1-3 Icicles and 1-4 Icicles is small, but 1-3 tends to be better in more situations (the higher GS damage is, the more it leans towards 1-3). Forcing shatter on Frostbolt is still a small gain, so is not caring about FoF. Ice Lance is too weak to warrant delaying Brain Freeze Flurry.
         -- actions.single+=/flurry,if=prev_gcd.1.frostbolt&buff.brain_freeze.react&(!talent.glacial_spike.enabled|buff.icicles.stack<4)
-        if cast.last.frostbolt() and bfExists and (not talent.glacialSpike or iciclesStack < 4 or targetUnit.ttd < 4) then
+        if cast.last.frostbolt() and bfExists and (not talent.glacialSpike or iciclesStack < 4 or targetUnit.ttd < 3) then
             if cast.flurry("target") then return true end
         end
         -- actions.single+=/frozen_orb
-        if not isChecked("Obey AoE units when using CDs") and useCDs() then
-            if castFrozenOrb(1, true, 4) then return true end
-        else
-            if castFrozenOrb(getOptionValue("Frozen Orb Units"), true, 4) then return true end
+        if not moving and targetMoveCheck then
+            if not isChecked("Obey AoE units when using CDs") and useCDs() then
+                if castFrozenOrb(1, true, 4) then return true end
+            else
+                if castFrozenOrb(getOptionValue("Frozen Orb Units"), true, 4) then return true end
+            end
         end
         -- # With Freezing Rain and at least 2 targets, Blizzard needs to be used with higher priority to make sure you can fit both instant Blizzards into a single Freezing Rain. Starting with three targets, Blizzard leaves the low priority filler role and is used on cooldown (and just making sure not to waste Brain Freeze charges) with or without Freezing Rain.
         -- actions.single+=/blizzard,if=active_enemies>2|active_enemies>1&cast_time=0&buff.fingers_of_frost.react<2
@@ -847,15 +874,25 @@ local function runRotation()
         end
         -- # Trying to pool charges of FoF for anything isn't worth it. Use them as they come.
         -- actions.single+=/ice_lance,if=buff.fingers_of_frost.react
-        if fofExists and (not (bfExists and iciclesStack >= 5) or targetUnit.ttd < 4) then
+        if fofExists and (not (bfExists and iciclesStack >= 5) or targetUnit.ttd < 3) then
             if cast.iceLance("target") then return true end
         end
         -- actions.single+=/comet_storm
-        if mode.cometStorm == 1 and not isMoving("target") and targetUnit.ttd > 3 and ((not isChecked("Obey AoE units when using CDs") and useCDs()) or #getEnemies("target", 5) >= getOptionValue("Comet Storm Units")) then
-            if cast.cometStorm("target") then return true end
+        if talent.cometStorm and mode.cometStorm == 1 and not isMoving("target") and targetUnit.ttd > 3 and ((not isChecked("Obey AoE units when using CDs") and useCDs()) or #getEnemies("target", 5) >= getOptionValue("Comet Storm Units")) then
+            if cast.cometStorm("target") then
+                if UnitIsVisible("pet") and not isBoss("target") then
+                    C_Timer.After(playerCastRemain + 0.4, function()
+                        if UnitIsVisible("target") then
+                            local x,y,z = ObjectPosition("target")
+                            castAtPosition(x,y,z, spell.petFreeze)
+                        end
+                    end)
+                end
+                return true 
+            end
         end
         -- actions.single+=/ebonbolt
-        if mode.ebonbolt == 1 and not moving and targetUnit.ttd > 4 and targetUnit.facing and not bfExists and (not talent.glacialSpike or iciclesStack >= 5) then
+        if mode.ebonbolt == 1 and not moving and targetUnit.ttd > 5 and targetUnit.facing and not bfExists and (not talent.glacialSpike or iciclesStack >= 5) then
             if cast.ebonbolt("target") then return true end
         end
         -- # Ray of Frost is used after all Fingers of Frost charges have been used and there isn't active Frozen Orb that could generate more. This is only a small gain against multiple targets, as Ray of Frost isn't too impactful.
@@ -890,7 +927,7 @@ local function runRotation()
         end
         -- # Glacial Spike is used when there's a Brain Freeze proc active (i.e. only when it can be shattered). This is a small to medium gain in most situations. Low mastery leans towards using it when available. When using Splitting Ice and having another target nearby, it's slightly better to use GS when available, as the second target doesn't benefit from shattering the main target.
         -- actions.single+=/glacial_spike,if=buff.brain_freeze.react|prev_gcd.1.ebonbolt|active_enemies>1&talent.splitting_ice.enabled
-        if (bfExists or cast.last.ebonbolt() or (blizzardUnits > 1 and talent.splittingIce)) and iciclesStack >= 5 and not moving and targetUnit.facing and targetUnit.ttd > 4 then
+        if (bfExists or cast.last.ebonbolt() or (blizzardUnits > 1 and talent.splittingIce)) and iciclesStack >= 5 and not moving and targetUnit.facing then
             if cast.glacialSpike("target") then return true end
         end
         -- actions.single+=/ice_nova
@@ -899,7 +936,7 @@ local function runRotation()
         end
         -- actions.single+=/use_item,name=tidestorm_codex,if=buff.icy_veins.down&buff.rune_of_power.down
         -- actions.single+=/frostbolt
-        if not moving and targetUnit.facing then
+        if not moving and targetUnit.facing and not fofExists then
             if cast.frostbolt("target") then return true end
         end
         -- actions.single+=/call_action_list,name=movement
@@ -913,10 +950,12 @@ local function runRotation()
     local function actionList_AoE()
         -- # With Freezing Rain, it's better to prioritize using Frozen Orb when both FO and Blizzard are off cooldown. Without Freezing Rain, the converse is true although the difference is miniscule until very high target counts.
         -- actions.aoe=frozen_orb
-        if not isChecked("Obey AoE units when using CDs") and useCDs() then
-            if castFrozenOrb(1, true, 4) then return true end
-        else
-            if castFrozenOrb(getOptionValue("Frozen Orb Units"), true, 4) then return true end
+        if not moving and targetMoveCheck then
+            if not isChecked("Obey AoE units when using CDs") and useCDs() then
+                if castFrozenOrb(1, true, 4) then return true end
+            else
+                if castFrozenOrb(getOptionValue("Frozen Orb Units"), true, 4) then return true end
+            end
         end
         -- actions.aoe+=/blizzard
         if not tankMoving and not moving and not playerCasting then
@@ -944,7 +983,17 @@ local function runRotation()
         end
         -- actions.aoe+=/comet_storm
         if mode.cometStorm == 1 and not isMoving("target") and targetUnit.ttd > 3 and ((isChecked("Ignore AoE units when using CDs") and useCDs()) or #getEnemies("target", 5) >= getOptionValue("Comet Storm Units")) then
-            if cast.cometStorm("target") then return true end
+            if cast.cometStorm("target") then
+                if UnitIsVisible("pet") and not isBoss("target") then
+                    C_Timer.After(playerCastRemain + 0.4, function()
+                        if UnitIsVisible("target") then
+                            local x,y,z = ObjectPosition("target")
+                            castAtPosition(x,y,z, spell.petFreeze)
+                        end
+                    end)
+                end
+                return true 
+            end
         end
         -- actions.aoe+=/ice_nova
         if targetUnit.facing then
@@ -952,7 +1001,7 @@ local function runRotation()
         end
         -- # Simplified Flurry conditions from the ST action list. Since the mage is generating far less Brain Freeze charges, the exact condition here isn't all that important.
         -- actions.aoe+=/flurry,if=prev_gcd.1.ebonbolt|buff.brain_freeze.react&(prev_gcd.1.frostbolt&(buff.icicles.stack<4|!talent.glacial_spike.enabled)|prev_gcd.1.glacial_spike)
-        if (cast.last.ebonbolt() and (not talent.glacialSpike or iciclesStack < 4 or targetUnit.ttd < 4)) or (buff.brainFreeze.exists() and ((cast.last.frostbolt() and (iciclesStack < 4 or not talent.glacialSpike or targetUnit.ttd < 4)) or cast.last.glacialSpike())) then
+        if (cast.last.ebonbolt() and (not talent.glacialSpike or iciclesStack < 4 or targetUnit.ttd < 3)) or (buff.brainFreeze.exists() and ((cast.last.frostbolt() and (iciclesStack < 4 or not talent.glacialSpike or targetUnit.ttd < 3)) or cast.last.glacialSpike())) then
             if cast.flurry("target") then return true end
         end
         -- actions.aoe+=/ice_lance,if=buff.fingers_of_frost.react
@@ -965,7 +1014,7 @@ local function runRotation()
             if cast.rayOfFrost("target") then return true end
         end
         -- actions.aoe+=/ebonbolt
-        if mode.ebonbolt == 1 and not moving and targetUnit.ttd > 4 and targetUnit.facing and not bfExists and (not talent.glacialSpike or iciclesStack >= 5) then
+        if mode.ebonbolt == 1 and not moving and targetUnit.ttd > 5 and targetUnit.facing and not bfExists and (not talent.glacialSpike or iciclesStack >= 5) then
             if cast.ebonbolt("target") then return true end
         end
         -- actions.aoe+=/glacial_spike
@@ -981,7 +1030,7 @@ local function runRotation()
         end
         -- actions.aoe+=/use_item,name=tidestorm_codex,if=buff.icy_veins.down&buff.rune_of_power.down
         -- actions.aoe+=/frostbolt
-        if not moving and targetUnit.facing then
+        if not moving and targetUnit.facing and not fofExists then
             if cast.frostbolt("target") then return true end
         end
         -- actions.aoe+=/call_action_list,name=movement
@@ -1066,7 +1115,7 @@ local function runRotation()
     -- Profile Stop | Pause
     if not inCombat and not hastar and profileStop == true then
         profileStop = false
-    elseif (inCombat and profileStop == true) or IsMounted() or IsFlying() or pause(true) or mode.rotation == 4 then
+    elseif (inCombat and profileStop == true) or IsMounted() or UnitChannelInfo("player") or IsFlying() or pause(true) then
         if not pause(true) and not talent.lonelyWinter and IsPetAttackActive() and isChecked("Pet Management") then
             PetStopAttack()
             PetFollow()
