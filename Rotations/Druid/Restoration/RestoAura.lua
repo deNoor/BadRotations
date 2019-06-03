@@ -931,7 +931,7 @@ local function runRotation()
 						return true
 					end
 					elseif getOptionValue("Trinket 1 Mode") == 2 then
-						if (lowest.hp <= getValue("Trinket 2") or burst == true) and lowest.hp ~= 250 then
+						if (lowest.hp <= getValue("Trinket 1") or burst == true) and lowest.hp ~= 250 then
 						UseItemByName(GetInventoryItemID("player", 13), lowest.unit)
 						br.addonDebug("Using Trinket 1 (Target)")
 						return true
@@ -1056,7 +1056,7 @@ local function runRotation()
 
 	local function actionList_Decurse()
 		-- Soothe
-		if isChecked("Auto Soothe") and cast.able.soothe() then
+		if isChecked("Auto Soothe") then
 			for i = 1, #enemies.yards40 do
 				local thisUnit = enemies.yards40[i]
 				if canDispel(thisUnit, spell.soothe) then
@@ -1484,7 +1484,7 @@ local function runRotation()
 							br.addonDebug("Casting Lifebloom")
 							return true
 						end
-					elseif bloomCount == 1 and buff.lifebloom.remains(br.friend[i].unit) < 4.5 and buff.lifebloom.remain(tanks[i].unit) > 0 and getDistance(br.friend[i].unit) <= 40 then
+					elseif bloomCount == 1 and buff.lifebloom.remains(br.friend[i].unit) < 4.5 and buff.lifebloom.remain(br.friend[i].unit) > 0 and getDistance(br.friend[i].unit) <= 40 then
 						--clearform()
 						if cast.lifebloom(br.friend[i].unit) then 
 							br.addonDebug("Casting Lifebloom")
