@@ -9,8 +9,7 @@ local function createToggles()
     -- Rotation Button
     RotationModes = {
         [1] = {mode = "Auto", value = 1, overlay = "Automatic Rotation", tip = "Swaps between Single and Multiple based on number of targets in range.", highlight = 1, icon = br.player.spell.frozenOrb},
-        [2] = {mode = "Mult", value = 2, overlay = "Multiple Target Rotation", tip = "Multiple target rotation used.", highlight = 0, icon = br.player.spell.blizzard},
-        [3] = {mode = "Sing", value = 3, overlay = "Single Target Rotation", tip = "Single target rotation used.", highlight = 0, icon = br.player.spell.frostbolt},
+        [2] = {mode = "Sing", value = 2, overlay = "Single Target Rotation", tip = "Single target rotation used.", highlight = 0, icon = br.player.spell.frostbolt},
     }
     CreateButton("Rotation", 1, 0)
     -- Cooldown Button
@@ -233,6 +232,17 @@ local function runRotation()
         else
             buttonEbonbolt:Show()
         end
+    end
+    -- spellqueue ready
+    local function spellQueueReady()
+        --Check if we can queue cast
+        local castingInfo = {UnitCastingInfo("player")}
+        if castingInfo[5] then
+            if (GetTime() - ((castingInfo[5] - tonumber(C_CVar.GetCVar("SpellQueueWindow")))/1000)) < 0 then
+                return false
+            end
+        end
+        return true
     end
 
     --cast time
@@ -464,7 +474,7 @@ local function runRotation()
         local distance20Min
         for i = 1, #enemies.yards40 do
             local thisUnit = enemies.yards40[i]
-            if (not noDotCheck(thisUnit) or GetUnitIsUnit(thisUnit, "target")) and not UnitIsDeadOrGhost(thisUnit) then
+            if (not noDotCheck(thisUnit) or GetUnitIsUnit(thisUnit, "target")) and not UnitIsDeadOrGhost(thisUnit) and (mode.rotation ~= 2 or GetUnitIsUnit(thisUnit, "target")) then
                 local enemyUnit = {}
                 enemyUnit.unit = thisUnit
                 enemyUnit.ttd = ttd(thisUnit)
@@ -782,10 +792,22 @@ local function runRotation()
             -- actions.cooldowns+=/use_items
             if isChecked("Trinkets") then
                 if canUseItem(13) then
-                    useItem(13)
+                    if hasEquiped(165576, 13) then -- tidestorm codex
+                        if not buff.icyVeins.exists() and not buff.runeOfPower.exists() then
+                            useItem(13)
+                        end
+                    else
+                        useItem(13)
+                    end
                 end
                 if canUseItem(14) then
-                    useItem(14)
+                    if hasEquiped(165576, 14) then -- tidestorm codex
+                        if not buff.icyVeins.exists() and not buff.runeOfPower.exists() then
+                            useItem(14)
+                        end
+                    else
+                        useItem(14)
+                    end
                 end
             end
             --racials
@@ -1076,20 +1098,22 @@ local function runRotation()
             SpellStopCasting()
             return true
         end
-        -- # If the mage has FoF after casting instant Flurry, we can delay the Ice Lance and use other high priority action, if available.
-        -- actions+=/ice_lance,if=prev_gcd.1.flurry&!buff.fingers_of_frost.react
-        if cast.last.flurry() and not fofExists then
-            if cast.iceLance("target") then return true end
+        if spellQueueReady() then
+            -- # If the mage has FoF after casting instant Flurry, we can delay the Ice Lance and use other high priority action, if available.
+            -- actions+=/ice_lance,if=prev_gcd.1.flurry&!buff.fingers_of_frost.react
+            if cast.last.flurry() and not fofExists then
+                if cast.iceLance("target") then return true end
+            end
+            -- actions+=/call_action_list,name=cooldowns
+            if actionList_Cooldowns() then return true end
+            -- # The target threshold isn't exact. Between 3-5 targets, the differences between the ST and AoE action lists are rather small. However, Freezing Rain prefers using AoE action list sooner as it benefits greatly from the high priority Blizzard action.
+            -- actions+=/call_action_list,name=aoe,if=active_enemies>3&talent.freezing_rain.enabled|active_enemies>4
+            if ((blizzardUnits > 3 and talent.freezingRain) or blizzardUnits > 4) and (not inInstance or targetMoveCheck) then
+                if actionList_AoE() then return true end
+            end
+            -- actions+=/call_action_list,name=single
+            if actionList_ST() then return true end
         end
-        -- actions+=/call_action_list,name=cooldowns
-        if actionList_Cooldowns() then return true end
-        -- # The target threshold isn't exact. Between 3-5 targets, the differences between the ST and AoE action lists are rather small. However, Freezing Rain prefers using AoE action list sooner as it benefits greatly from the high priority Blizzard action.
-        -- actions+=/call_action_list,name=aoe,if=active_enemies>3&talent.freezing_rain.enabled|active_enemies>4
-        if ((blizzardUnits > 3 and talent.freezingRain) or blizzardUnits > 4) and (not inInstance or targetMoveCheck) then
-            if actionList_AoE() then return true end
-        end
-        -- actions+=/call_action_list,name=single
-        if actionList_ST() then return true end
     end
 
     local function actionList_Opener()
