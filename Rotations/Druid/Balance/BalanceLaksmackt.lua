@@ -62,7 +62,7 @@ local function createOptions()
     br.ui:createCheckbox(section, "Auto Shapeshifts")
     br.ui:createCheckbox(section, "Auto Soothe")
     br.ui:createSpinnerWithout(section, "Starsurge/Starfall Dump", 40, 40, 100, 5, "Set minimum AP value for Starsurge use. Min: 40 / Max: 100 / Interval: 5")
-    br.ui:createCheckbox(section, "Auto Engage On Target", "Check this to cast moonfire on target OOC to engage combat")
+    br.ui:createCheckbox(section, "Auto Engage On Target", "Check this to cast sunfire on target OOC to engage combat")
     br.ui:checkSectionState(section)
     section = br.ui:createSection(br.ui.window.profile, "Healing")
     br.ui:createDropdown(section, "Rebirth", { "|cff00FF00Tanks", "|cffFFFF00Healers", "|cffFFFFFFTanks and Healers", "|cffFF0000Mouseover Target", "|cffFFFFFFAny" }, 3, "", "|ccfFFFFFFTarget to Cast On")
@@ -79,8 +79,11 @@ local function createOptions()
     br.ui:createCheckbox(section, "Use Trinkets")
     br.ui:createCheckbox(section, "Warrior Of Elune")
     br.ui:createCheckbox(section, "Fury Of Elune")
+    br.ui:createSpinnerWithout(section, "Fury of Elune Targets", 3, 1, 10, 1, "How many baddies before using Fury?")
+    br.ui:createCheckbox(section, "Group Fury with CD")
     br.ui:createCheckbox(section, "Incarnation/Celestial Alignment")
     br.ui:createSpinnerWithout(section, "Treant Targets", 3, 1, 10, 1, "How many baddies before using Treant?")
+    br.ui:createCheckbox(section, "Group treants with CD")
     br.ui:createDropdown(section, "Treants Key", br.dropOptions.Toggle, 6, "", "|cffFFFFFFTreant Key")
 
     br.ui:checkSectionState(section)
@@ -91,9 +94,9 @@ local function createOptions()
     br.ui:createSpinnerWithout(section, "Max Stellar Flare Targets", 2, 1, 10, 1, "|cff0070deSet to maximum number of targets to dot with Stellar Flare. Min: 1 / Max: 10 / Interval: 1")
     br.ui:createSpinnerWithout(section, "Max Moonfire Targets", 2, 1, 10, 1, "|cff0070deSet to maximum number of targets to dot with Moonfire. Min: 1 / Max: 10 / Interval: 1")
     br.ui:createSpinnerWithout(section, "Max Sunfire Targets", 2, 1, 10, 1, "|cff0070deSet to maximum number of targets to dot with Sunfire. Min: 1 / Max: 10 / Interval: 1")
-    br.ui:createSpinnerWithout(section, "Lunar Strike Filler Targets", 2, 1, 10, 1, "|cff0070deSet to minimum number of targets to use Lunar Strike as filler spell. Min: 1 / Max: 10 / Interval: 1")
+    br.ui:createSpinnerWithout(section, "Lunar Strike Filler Targets", 2, 1, 10, 1, "|cff0070deSet to minimum number of targets to use Lunar Strike as filler spell. natuMin: 1 / Max: 10 / Interval: 1")
     br.ui:createSpinnerWithout(section, "Starfall Targets (0 for auto)", 0, 0, 10, 1, "|cff0070deSet to minimum number of targets to use Starfall. 0 to calculate")
-    --    br.ui:createSpinnerWithout(section, "Fury of Elune Targets", 2, 1, 10, 1, "|cff0070deSet to minimum number of targets to use Fury of Elune. Min: 1 / Max: 10 / Interval: 1" )
+    br.ui:createSpinnerWithout(section, "Fury of Elune Targets", 2, 1, 10, 1, "|cff0070deSet to minimum number of targets to use Fury of Elune. Min: 1 / Max: 10 / Interval: 1")
     br.ui:checkSectionState(section)
     -------------------------
     --- DEFENSIVE OPTIONS --- -- Define Defensive Options
@@ -191,7 +194,8 @@ local function runRotation()
   local moving = isMoving("player")
   local ttd = getTTD
   local astralPowerDeficit = br.player.power.astralPower.deficit()
-
+  local travel, flight, cat = br.player.buff.travelForm.exists(), br.player.buff.flightForm.exists(), br.player.buff.catForm.exists()
+  local catspeed = br.player.buff.dash.exists() or br.player.buff.tigerDash.exists()
   -------------
   -- Raid
   ------------
@@ -216,6 +220,13 @@ local function runRotation()
   enemies.get(15, "target") -- enemies.yards15t
   enemies.get(12, "target") -- enemies.yards12t
   local function dps()
+
+    if not br.player.buff.moonkinForm.exists() and not cast.last.moonkinForm(1) then
+      if cast.moonkinForm() then
+        return true
+      end
+    end
+
     local aoeTarget = 0
     if getValue("Starfall Targets (0 for auto)") == 0 then
       aoeTarget = 4
@@ -274,12 +285,12 @@ local function runRotation()
     end
 
     -- Innverate
-   --Print("Innervate Check: "..tostring(isChecked("Auto Innervate")) .." castable: " .. tostring(cast.able.innervate()).." TTD: " ..getTTD("target"))
+    --Print("Innervate Check: "..tostring(isChecked("Auto Innervate")) .." castable: " .. tostring(cast.able.innervate()).." TTD: " ..getTTD("target"))
 
     if isChecked("Auto Innervate") and cast.able.innervate() and getTTD("target") >= 12 then
       for i = 1, #br.friend do
-                if UnitGroupRolesAssigned(br.friend[i].unit) == "HEALER" and inInstance or inRaid and not isDeadOrGhost(br.friend[i].unit) then
-         Print("Healer is: ".. br.friend[i].unit)
+        if UnitGroupRolesAssigned(br.friend[i].unit) == "HEALER" and inInstance or inRaid and not isDeadOrGhost(br.friend[i].unit) then
+          Print("Healer is: " .. br.friend[i].unit)
           if cast.innervate(br.friend[i].unit) then
             return true
           end
@@ -312,18 +323,20 @@ local function runRotation()
     end
 
     --	fury_of_elune
-    if talent.furyOfElune and isChecked("Fury Of Elune") and (pewbuff or cd.celestialAlignment.remain() > 30 or cd.incarnationChoseOfElune.remain() > 30) then
+    if talent.furyOfElune and isChecked("Fury Of Elune") and (#enemies.yards8t >= getValue("Fury of Elune Targets") or isBoss()) and getTTD("target") >= 8
+            and (isChecked("Group Fury with CD") and (pewbuff or cd.celestialAlignment.remain() > 30 or cd.incarnationChoseOfElune.remain() > 30) or not isChecked("Group Fury with CD")) then
       if cast.furyOfElune(getBiggestUnitCluster(45, 1.25)) then
         return true
       end
     end
 
 
+
     -- Force Of Nature / treants
     if talent.forceOfNature and cast.able.forceOfNature() and br.player.power.astralPower.deficit() > 20 then
       if br.player.mode.forceOfNature == 1 and getTTD("target") >= 10
-              and (pewbuff or cd.celestialAlignment.remain() > 30 or cd.incarnationChoseOfElune.remain() > 30)
-              and (getValue("Treant Targets") >= #enemies.yards12t or isBoss())
+              and (isChecked("Group treants with CD") and (pewbuff or cd.celestialAlignment.remain() > 30 or cd.incarnationChoseOfElune.remain() > 30) or not isChecked("Group treants with CD"))
+              and (#enemies.yards12t >= getValue("Treant Targets") or isBoss())
       then
         if cast.forceOfNature("best", nil, 1, 15, true) then
           return true
@@ -358,21 +371,21 @@ local function runRotation()
     --starsurge,if=(talent.starlord.enabled&(buff.starlord.stack<3|buff.starlord.remains>=5&buff.arcanic_pulsar.stack<8)|!talent.starlord.enabled&(buff.arcanic_pulsar.stack<8|buff.ca_inc.up))&spell_targets.starfall<variable.sf_targets&buff.lunar_empowerment.stack+buff.solar_empowerment.stack<4&buff.solar_empowerment.stack<3&buff.lunar_empowerment.stack<3&(!variable.az_ss|!buff.ca_inc.up|!prev.starsurge)|target.time_to_die<=execute_time*astral_power%40|!solar_wrath.ap_check
 
 
-
-    if talent.starlord and power >= 40 and cast.able.starsurge and
-            ((traits.streakingStars.active and pewbuff and not cast.last.starsurge(1)) or not pewbuff or not traits.streakingStars.active)
-            and (buff.starLord.stack() < 3 and (buff.starLord.remain() >= 8) or not buff.starLord.exists())
-            and (buff.arcanicPulsar.stack() < 8 or (power >= 75 and buff.arcanicPulsar.stack() == 8)) then
-
-      if cast.starsurge(units.dyn45) then
-        --Print("Stacks: " .. buff.starLord.stack() .. " Remain: " .. buff.starLord.remain() .. " pulsar: " .. buff.arcanicPulsar.stack())
-        return true
-      end
-    elseif not talent.starlord then
-      if (buff.arcanicPulsar.stack() < 8 or pewbuff) or
-              buff.lunarEmpowerment.stack() + buff.solarEmpowerment.stack() < 4 and buff.solarEmpowerment.stack() < 3 and buff.lunarEmpowerment.stack() < 3 then
-        if cast.starsurge(units.dyn45) then
-          return
+    if (traits.streakingStars.active and pewbuff and not cast.last.starsurge(1)) or not traits.streakingStars.active or not pewbuff then
+      if talent.starlord and power >= 40 and cast.able.starsurge
+              and (buff.starLord.stack() < 3 and (buff.starLord.remain() >= 8) or not buff.starLord.exists()) then
+        if traits.arcanicPulsar.active and (buff.arcanicPulsar.stack() < 8 or (power >= 75 and buff.arcanicPulsar.stack() == 8)) or not traits.arcanicPulsar.active then
+          if cast.starsurge(units.dyn45) then
+            --Print("Stacks: " .. buff.starLord.stack() .. " Remain: " .. buff.starLord.remain() .. " pulsar: " .. buff.arcanicPulsar.stack())
+            return true
+          end
+        end
+      elseif not talent.starlord and power >= 40 and cast.able.starsurge then
+        if (buff.arcanicPulsar.stack() < 8 or pewbuff) or
+                buff.lunarEmpowerment.stack() + buff.solarEmpowerment.stack() < 4 and buff.solarEmpowerment.stack() < 3 and buff.lunarEmpowerment.stack() < 3 then
+          if cast.starsurge(units.dyn45) then
+            return
+          end
         end
       end
     end
@@ -408,7 +421,10 @@ local function runRotation()
     --variable.az_ss&buff.ca_inc.up&prev.solar_wrath)
     if (traits.streakingStars.active and pewbuff and not cast.last.lunarStrike(1)) or not traits.streakingStars.active or not pewbuff then
       if buff.owlkinFrenzy.exists()
-              or buff.solarEmpowerment.stack() < 3 and buff.lunarEmpowerment.stack() == 3 and (buff.warriorOfElune.exists() or #enemies.yards8t >= 2 or buff.solarEmpowerment.stack == 0)
+              or (buff.solarEmpowerment.stack() < 3 and buff.lunarEmpowerment.stack() == 3)
+              or buff.warriorOfElune.exists()
+              or (#enemies.yards8t >= 2 and buff.lunarEmpowerment.stack() > 0)
+              or buff.solarEmpowerment.stack == 0
               or (traits.streakingStars.active and pewbuff and cast.last.solarWrath(1)) then
         if cast.lunarStrike(units.dyn45) then
           return true
@@ -416,7 +432,7 @@ local function runRotation()
       end
     end
     --solar_wrath,if=variable.az_ss<3|!buff.ca_inc.up|!prev.solar_wrath
-    if ((traits.streakingStars.active and pewbuff and not cast.last.solarWrath(1)) or not pewbuff) then
+    if ((traits.streakingStars.active and pewbuff and not cast.last.solarWrath(1)) or not pewbuff or not traits.streakingStars.active) then
       if cast.solarWrath(units.dyn45) then
       end
     end
@@ -617,6 +633,11 @@ local function runRotation()
         end
       end
     end
+    if isChecked("Auto Engage On Target") then
+      if cast.sunfire() then
+        return true
+      end
+    end
   end
   local function extras()
     --Resurrection
@@ -640,8 +661,18 @@ local function runRotation()
       end
     end
     -- Shapeshift Form Management
+    local standingTime = 0
+    if DontMoveStartTime then
+      standingTime = GetTime() - DontMoveStartTime
+    end
+
     if isChecked("Auto Shapeshifts") then
-      --and br.timer:useTimer("debugShapeshift", 0.25) then
+      if travel and standingTime > 3 then
+        if cast.moonkinForm("player") then
+          return true
+        end
+      end
+
       -- Flight Form
       if not inCombat and canFly() and not swimming and br.fallDist > 90 --[[falling > getOptionValue("Fall Timer")]] and level >= 58 and not buff.prowl.exists() then
         if GetShapeshiftForm() ~= 0 and not cast.last.travelForm() then
@@ -667,7 +698,7 @@ local function runRotation()
         end
       end
       -- Travel Form
-      if not inCombat and not swimming and br.player.level >= 58 and not buff.prowl.exists() and not travel and not IsIndoors() and IsMovingTime(1) then
+      if not inCombat and not swimming and br.player.level >= 58 and not buff.prowl.exists() and not catspeed and not travel and not IsIndoors() and IsMovingTime(1) then
         if GetShapeshiftForm() ~= 0 and not cast.last.travelForm() then
           RunMacroText("/CancelForm")
           CastSpellByID(783, "player")
