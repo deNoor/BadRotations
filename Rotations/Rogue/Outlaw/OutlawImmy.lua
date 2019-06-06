@@ -270,28 +270,6 @@ local function runRotation()
       spread = true
     end
 
-        
-    
-    -- print(checkDR(199804,"target"))
-    -- print(UnitClassification("target"))
-    if not UnitAffectingCombat("player") then
-        if not talent.markedForDeath then
-            buttonMFD:Hide()
-        else
-            buttonMFD:Show()
-        end
-        if not talent.killingSpree and not talent.bladeRush then
-            buttonTierseven:Hide()
-        else
-            buttonTierseven:Show()
-        end
-    end
-
-    local spread = false
-    if GetKeyState(0x10) then
-      spread = true
-    end
-
         dotHPLimit = getOptionValue("BF HP Limit") * 10000
 
         
