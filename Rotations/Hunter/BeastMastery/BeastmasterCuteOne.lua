@@ -75,6 +75,8 @@ local function createOptions()
             br.ui:createDropdownWithout(section, "APL Mode", {"|cffFFFFFFSimC"}, 1, "|cffFFFFFFSet APL Mode to use.")
             -- Dummy DPS Test
             br.ui:createSpinner(section, "DPS Testing",  5,  5,  60,  5,  "|cffFFFFFFSet to desired time for test in minuts. Min: 5 / Max: 60 / Interval: 5")
+            -- Beast Mode
+            br.ui:createCheckbox(section, "Beast Mode", "|cffFFFFFFWARNING! Selecting this will attack everything!")
             -- AoE Units
             br.ui:createSpinnerWithout(section, "Units To AoE", 2, 1, 10, 1, "|cffFFFFFFSet to desired units to start AoE at.")
             -- Misdirection
@@ -938,8 +940,14 @@ actionList.PreCombat = function()
             if buff.felFocus.exists() then buff.felFocus.cancel() end
             if use.oraliusWhisperingCrystal() then return true end
         end
+        -- Beast Mode
+        if (isChecked("Beast Mode")) then
+            for k,v in pairs(enemies.yards40nc) do
+                TargetUnit(v)
+            end
+        end
         -- Init Combat
-        if isValidUnit("target") and getDistance("target") < 40 and opener.complete then
+        if getDistance("target") < 40 and isValidUnit("target") and opener.complete then
             -- Auto Shot
             StartAttack()
         end
@@ -1006,6 +1014,7 @@ local function runRotation()
     enemies.get(8,"target")
     enemies.get(40)
     enemies.get(40,"player",false,true)
+    enemies.get(40,"player",true)
     enemies.get(5,"pet")
     enemies.get(8,"pet")
     enemies.get(20,"pet")
