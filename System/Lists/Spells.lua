@@ -588,7 +588,6 @@ br.lists.spells = {
             buffs                           = {
                 gazeOfTheLegion             = 193456,
                 glide                       = 131347,
-                vigorEngaged                = 287916,
             },
             debuffs                         = {
 
@@ -754,6 +753,7 @@ br.lists.spells = {
                 soulOfTheForest             = 158476,
             },
             traits                          = {
+                bloodMist                   = 279524,
                 ironJaws                    = 276021,
                 twistedClaws                = 275906,
                 wildFleshrending            = 279527,
@@ -1177,6 +1177,7 @@ br.lists.spells = {
                 sonicBlast                  = 264263,
                 soothingWater               = 254262,
                 sporeCloud                  = 254056,
+                survivalOfTheFittest        = 264735,
 
                 camouflage                  = 199483,
                 catlikeReflexes             = 263892,
@@ -1199,6 +1200,7 @@ br.lists.spells = {
                 revivePet                   = 982,
                 smack                       = 49966,
                 spiritmend                  = 90361,
+                spiritWalk                  = 90328,
                 tarTrap                     = 187698,
                 wakeUp                      = 210000,
             },
@@ -1211,6 +1213,7 @@ br.lists.spells = {
                 mendPet                     = 136,
                 playDead                    = 209997,
                 prowl                       = 24450,
+                spiritWalk                  = 90328,
             },
             debuffs                         = {
                 bestialFerocity             = 191413,
@@ -2588,6 +2591,7 @@ br.lists.spells = {
                 ancestralGuidance           = 108281,
                 ascendance                  = 114050,
                 chainLightning              = 188443,
+                cleanseSpirit               = 51886,
                 earthElemental              = 198103,
                 earthquake                  = 61882,
                 earthShield                 = 974,
@@ -3443,6 +3447,7 @@ br.lists.spells = {
                 whispersOfInsanity              = 176151,
                 cracklingTourmaline             = 290372,
                 saphireofBrilliance             = 290365,
+                vigorEngaged                    = 287916,
             },
             debuffs                             = {
                 dampening                       = 110310,
@@ -3489,6 +3494,7 @@ br.lists.spells = {
                 ringOfCollapsingFutures         = 142173,
                 specterOfBetrayal               = 151190,
                 umbralMoonglaives               = 147012,
+                vigorTrinket                    = 165572,
                 vialOfCeaselessToxins           = 147011,
             },
         },
