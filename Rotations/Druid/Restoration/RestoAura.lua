@@ -617,57 +617,34 @@ local function runRotation()
 	local function actionList_Extras()
 		if isChecked("Auto Shapeshifts") and (getOptionValue("Auto Shapeshifts") == 1 or getOptionValue("Auto Shapeshifts") == 2) then --and br.timer:useTimer("debugShapeshift", 0.25) then
 			-- Flight Form
-			if not inCombat and canFly() and not swimming and br.fallDist > 90 --[[falling > getOptionValue("Fall Timer")]] and level >= 58 and not buff.prowl.exists() then
-				if GetShapeshiftForm() ~= 0 and not cast.last.travelForm() then
-					-- CancelShapeshiftForm()
-					RunMacroText("/CancelForm")
-					CastSpellByID(783, "player")
-					br.addonDebug("Casting Travelform")
-					return true
-				else
-					CastSpellByID(783, "player")
-					br.addonDebug("Casting Travelform")
-					return true
-				end
+			if not inCombat and canFly() and br.fallDist > 90 --[[falling > getOptionValue("Fall Timer")]] and level >= 58 and not buff.prowl.exists() then
+				CastSpellByID(783, "player")
+				br.addonDebug("Casting Travelform")
+				return true
 			end
 			-- Aquatic Form
 			if (not inCombat) --[[or getDistance("target") >= 10--]] and swimming and not travel and not buff.prowl.exists() and moving then
-				if GetShapeshiftForm() ~= 0 and not cast.last.travelForm() then
-					-- CancelShapeshiftForm()
-					RunMacroText("/CancelForm")
-					CastSpellByID(783, "player")
-					br.addonDebug("Casting Travelform")
-					return true
-				else
-					CastSpellByID(783, "player")
-					br.addonDebug("Casting Travelform")
-					return true
-				end
+				CastSpellByID(783, "player")
+				br.addonDebug("Casting Travelform")
+				return true
 			end
 			-- Travel Form
 			if not inCombat and not swimming and level >= 58 and not buff.prowl.exists() and not travel and not IsIndoors() and IsMovingTime(1) and br.timer:useTimer("Travel shift",3) then
-				if GetShapeshiftForm() ~= 0 and not cast.last.travelForm() then
-					RunMacroText("/CancelForm")
-					CastSpellByID(783, "player")
-					br.addonDebug("Casting Travelform")
-					return true
-				else
-					CastSpellByID(783, "player")
-					br.addonDebug("Casting Travelform")
-					return true
-				end
+				CastSpellByID(783, "player")
+				br.addonDebug("Casting Travelform")
+				return true
 			end
 			-- Cat Form
-			if not cat and not IsMounted() and not flying and IsIndoors() then
+			if not cat and not IsMounted() and not flying then
 				-- Cat Form when not swimming or flying or stag and not in combat
-				if moving and not swimming and not flying and not travel then
+				if moving and not swimming and not travel and IsIndoors() then
 					if cast.catForm("player") then
 						br.addonDebug("Casting Catform")
 						return true
 					end
 				end
 				-- Cat Form - Less Fall Damage
-				if (not canFly() or inCombat or level < 58) and (not swimming or (not moving and swimming and #enemies.yards5 > 0)) and br.fallDist > 90 then --falling > getOptionValue("Fall Timer") then
+				if (not canFly() or inCombat or level < 58) and br.fallDist > 90 then --falling > getOptionValue("Fall Timer") then
 					if cast.catForm("player") then
 						br.addonDebug("Casting Catform")
 						return true
@@ -1910,7 +1887,7 @@ local function runRotation()
 				end
 			end
 			-- Solar Wrath
-			if not moving and GetUnitExists("target") and mana >= getOptionValue("DPS Save mana") then
+			if not moving and GetUnitExists("target") then
 				if (isChecked("Auto Shapeshifts") and (getOptionValue("Auto Shapeshifts") == 1 or getOptionValue("Auto Shapeshifts") == 3)) or isChecked("DPS Key") then
 					if getDistance("target", "player") > 5 or not bear and getFacing("player","target") then
 						if cast.solarWrath("target") then
@@ -1918,7 +1895,7 @@ local function runRotation()
 							return true
 						end
 					end
-				elseif mana >= getOptionValue("DPS Save mana")and (not isChecked("Auto Shapeshifts") or (isChecked("Auto Shapeshifts") and getOptionValue("Auto Shapeshifts") == 2)) and getFacing("player","target")then
+				elseif (not isChecked("Auto Shapeshifts") or (isChecked("Auto Shapeshifts") and getOptionValue("Auto Shapeshifts") == 2)) and getFacing("player","target")then
 					if cast.solarWrath("target") then
 						br.addonDebug("Casting Solar Wrath")
 						return true
@@ -1996,7 +1973,7 @@ local function runRotation()
 					end
 				end
 				-- Solar Wrath
-				if not moving and getFacing("player","target") and mana >= getOptionValue("DPS Save mana") then
+				if not moving and getFacing("player","target") then
 					if cast.solarWrath("target") then
 						br.addonDebug("Casting Solar Wrath")
 						return true

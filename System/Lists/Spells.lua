@@ -688,7 +688,6 @@ br.lists.spells = {
                 arcanicPulsar               = 287773,
                 dawningSun                  = 276152,
                 highNoon                    = 278505,
-                livelySpirit                = 279642,
                 lunarShrapnel               = 278507,
                 powerOfTheMoon              = 273367,
                 streakingStars              = 272871,
@@ -822,6 +821,7 @@ br.lists.spells = {
                 solarWrath                  = 5176,
                 sunfire                     = 93402,
                 tranquility                 = 740,
+                ursolsVortex                = 102793,
                 yserasGift                  = 145108,
             },
             artifacts                       = {
@@ -960,6 +960,9 @@ br.lists.spells = {
                 tigerDash                   = 252216,
                 typhoon                     = 132469,
                 wildCharge                  = 102401,
+            },
+            traits                          = {
+                livelySpirit                = 279642,
             },
         },
     },
@@ -1802,6 +1805,7 @@ br.lists.spells = {
             debuffs                         = {
                 judgement                   = 214222,
                 judgmentoflight             = 196941,
+                glimmerOfLight              = 287280,
 
             },
             glyphs                          = {
@@ -2933,6 +2937,7 @@ br.lists.spells = {
                 agony                       = 980,
                 corruption                  = 146739,
                 haunt                       = 48181,
+                phantomSingularity          = 205179,
                 seedOfCorruption            = 27243,
                 shadowEmbrace               = 32388,
                 siphonLife                  = 63106,
@@ -2963,6 +2968,7 @@ br.lists.spells = {
             },
             traits                          = {
                 cascadingCalamity           = 275372,
+                pandemicInvocation          = 289364,
             }
         },
         -- Demonology
@@ -2977,6 +2983,7 @@ br.lists.spells = {
                 demonwrath                  = 193440,
                 doom                        = 603,
                 drainLife                   = 234153,
+                felFirebolt                 = 104318,
                 felstorm                    = 89751,
                 grimoireFelguard            = 111898,
                 handOfGuldan                = 105174,
@@ -3006,6 +3013,7 @@ br.lists.spells = {
                 explosivePotential          = 275398,
                 forbiddenKnowledge          = 278738,
                 netherPortal                = 267218,
+                shadowsBite                 = 272945,
                 shadowyInspiration          = 196269,
             },
             debuffs                         = {
@@ -3017,6 +3025,7 @@ br.lists.spells = {
             },
             talents                         = {
                 bilescourgeBombers          = 267211,
+                demonicConsumption          = 267215,
                 demonicStrength             = 267171,
                 doom                        = 265412,
                 netherPortal                = 267217,
@@ -3026,7 +3035,9 @@ br.lists.spells = {
 
             },
             traits                          = {
+                balefulInvocation           = 287059,
                 explosivePotential          = 275395,
+                shadowsBite                 = 272944,
             }
         },
         -- Destruction
