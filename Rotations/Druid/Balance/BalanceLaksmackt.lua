@@ -95,6 +95,8 @@ local function createOptions()
     br.ui:createSpinnerWithout(section, "Treant Targets", 3, 1, 10, 1, "How many baddies before using Treant?")
     br.ui:createCheckbox(section, "Group treants with CD")
     br.ui:createDropdown(section, "Treants Key", br.dropOptions.Toggle, 6, "", "|cffFFFFFFTreant Key")
+    br.ui:createSpinner(section, "ConcentratedFlame - Heal", 5, 0, 100, 5, "", "health to heal at")
+    br.ui:createCheckbox(section, "ConcentratedFlame - DPS")
     br.ui:checkSectionState(section)
     -------------------------
     ---  TARGET OPTIONS   ---  -- Define Target Options
@@ -174,8 +176,8 @@ local function runRotation()
   -- local falling, swimming, flying, moving             = getFallTime(), IsSwimming(), IsFlying(), GetUnitSpeed("player")>0
   -- local healPot                                       = getHealthPot()
   -- local level                                         = br.player.level
-  -- local lowestHP                                      = br.friend[1].unit
-  -- local lowest                                        = br.friend[1]
+  local lowestHP = br.friend[1].unit
+  local lowest = br.friend[1]
   local mana = getMana("player")
   -- local perk                                          = br.player.perk
 
@@ -203,6 +205,7 @@ local function runRotation()
   local racial = br.player.getRacial()
   local traits = br.player.traits
   local moving = isMoving("player")
+  local swimming = IsSwimming()
   local ttd = getTTD
   local astralPowerDeficit = br.player.power.astralPower.deficit()
   local travel, flight, cat = br.player.buff.travelForm.exists(), br.player.buff.flightForm.exists(), br.player.buff.catForm.exists()
@@ -267,6 +270,12 @@ local function runRotation()
 
     if not br.player.buff.moonkinForm.exists() and not buff.prowl.exists() and not cast.last.moonkinForm(1) then
       if cast.moonkinForm() then
+        return true
+      end
+    end
+
+    if isChecked("ConcentratedFlame - DPS") then
+      if cast.concentratedFlame("target") then
         return true
       end
     end
@@ -338,7 +347,7 @@ local function runRotation()
 
     if isChecked("Auto Innervate") and cast.able.innervate() and getTTD(UnitTarget(tank)) >= 12 then
       for i = 1, #br.friend do
-        if UnitGroupRolesAssigned(br.friend[i].unit) == "HEALER" and FaceDirection(br.friend[i].unit) and getDistance(br.friend[i].unit) < 45 and inInstance or inRaid and not UnitIsDeadOrGhost(br.friend[i].unit) and getLineOfSight(br.friend[i].unit) then
+        if UnitGroupRolesAssigned(br.friend[i].unit) == "HEALER" and getDistance(br.friend[i].unit) < 45 and inInstance or inRaid and not UnitIsDeadOrGhost(br.friend[i].unit) and getLineOfSight(br.friend[i].unit) then
           --Print("Healer is: " .. br.friend[i].unit)
           if cast.innervate(br.friend[i].unit) then
             return true

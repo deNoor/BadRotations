@@ -15,8 +15,7 @@ local stunSpellList = "274400|274383|257756|276292|268273|256897|272542|272888|2
 local function createToggles() -- Define custom toggles
     RotationModes = {
         [1] = { mode = "Auto", value = 1 , overlay = "Automatic Rotation", tip = "Swaps between Single and Multiple based on number of enemies in range.", highlight = 1, icon = br.player.spell.garrote },
-        [2] = { mode = "Mult", value = 2 , overlay = "Multiple Target Rotation", tip = "Multiple target rotation used.", highlight = 0, icon = br.player.spell.fanOfKnives },
-        [3] = { mode = "Sing", value = 3 , overlay = "Single Target Rotation", tip = "Single target rotation used.", highlight = 0, icon = br.player.spell.mutilate }
+        [2] = { mode = "Sing", value = 2 , overlay = "Single Target Rotation", tip = "Single target rotation used.", highlight = 0, icon = br.player.spell.mutilate }
     };
     CreateButton("Rotation",1,0)
     CooldownModes = {
@@ -86,6 +85,8 @@ local function createOptions()
             br.ui:createCheckbox(section, "Ignore Blacklist for FoK and CT", "|cffFFFFFF Ignore blacklist for Fan of Knives and Crimson Tempest usage")
             br.ui:createSpinner(section,  "Disable Garrote on # Units",  10,  1,  20,  1,  "|cffFFFFFF Max units within 10 yards for garrote usage outside stealth (FoK spam)")
             br.ui:createCheckbox(section, "Dot Players", "|cffFFFFFF Check to dot player targets (MC ect.)")
+            br.ui:createSpinner(section,  "Focused Azerite Beam",  3,  1,  10,  1,  "|cffFFFFFF Min. units hit to use Focused Azerite Beam")
+            br.ui:createCheckbox(section, "Ignore Azerite Beam Units During CDs", "|cffFFFFFF Check to use use on CD regardless of units on bosses/with CDs on")
         br.ui:checkSectionState(section)
         ------------------------
         --- COOLDOWN OPTIONS --- -- Define Cooldown Options
@@ -107,6 +108,7 @@ local function createOptions()
             br.ui:createSpinner(section, "Heirloom Neck",  60,  0,  100,  5,  "|cffFFBB00Health Percentage to use at.")
             br.ui:createCheckbox(section, "Cloak of Shadows")
             br.ui:createSpinner(section, "Crimson Vial",  50,  0,  100,  5,  "|cffFFBB00Health Percentage to use at.")
+            br.ui:createSpinner(section, "Concentrated Flame",  50,  0,  100,  5,  "|cffFFBB00Health Percentage to use at.")
             br.ui:createSpinner(section, "Evasion",  50,  0,  100,  5,  "|cffFFBB00Health Percentage to use at.")
             br.ui:createSpinner(section, "Feint", 75, 0, 100, 5, "|cffFFBB00Health Percentage to use at.")
             br.ui:createCheckbox(section, "Auto Defensive Unavoidables", "|cffFFFFFF Will use feint/evasion on certain unavoidable boss abilities")
@@ -255,6 +257,56 @@ local function runRotation()
         return ttdSec
     end
 
+    local standingTime = 0
+    if DontMoveStartTime then
+        standingTime = GetTime() - DontMoveStartTime
+    end
+
+    local function castBeam(minUnits, safe, minttd)
+        if not isKnown(spell.focusedAzeriteBeam) or getSpellCD(spell.focusedAzeriteBeam) ~= 0 then
+            return false
+        end
+        if isChecked("Ignore Azerite Beam Units During CDs") and useCDs() then
+            minUnits = 1
+        end
+        local x, y, z = ObjectPosition("player")
+        local length = 30
+        local width = 6
+        ttd = ttd or 0
+        safe = safe or true
+        local function getRectUnit(facing)
+            local halfWidth = width/2
+            local nlX, nlY, nlZ = GetPositionFromPosition(x, y, z, halfWidth, facing + math.rad(90), 0)
+            local nrX, nrY, nrZ = GetPositionFromPosition(x, y, z, halfWidth, facing + math.rad(270), 0)
+            local frX, frY, frZ = GetPositionFromPosition(nrX, nrY, nrZ, length, facing, 0)
+            return nlX, nlY, nrX, nrY, frX, frY
+        end
+        local enemiesTable = getEnemies("player", length, true)
+        local facing = ObjectFacing("player")        
+        local unitsInRect = 0
+        local nlX, nlY, nrX, nrY, frX, frY = getRectUnit(facing)
+        local thisUnit
+        for i = 1, #enemiesTable do
+            thisUnit = enemiesTable[i]
+            local uX, uY, uZ = ObjectPosition(thisUnit)
+            if isInside(uX, uY, nlX, nlY, nrX, nrY, frX, frY) and not TraceLine(x, y, z+2, uX, uY, uZ+2, 0x100010) then
+                if safe and not UnitAffectingCombat(thisUnit) and not isDummy(thisUnit) then
+                    unitsInRect = 0
+                    break
+                end            
+                if ttd(thisUnit) >= minttd then                
+                    unitsInRect = unitsInRect + 1
+                end
+            end
+        end
+        if unitsInRect >= minUnits then
+            CastSpellByName(GetSpellInfo(spell.focusedAzeriteBeam))
+            return true
+        else
+            return false
+        end
+    end
+
     local function shallWeDot(unit)
         if isChecked("Auto Garrote HP Limit") and ttd(unit) == 999 and not UnitIsPlayer(unit) and not isDummy(unit) then
             local hpLimit = 0
@@ -365,7 +417,7 @@ local function runRotation()
         local lowestHP
         for i = 1, #enemies.yards30 do
             local thisUnit = enemies.yards30[i]
-            if (not noDotCheck(thisUnit) or GetUnitIsUnit(thisUnit, "target")) and not UnitIsDeadOrGhost(thisUnit) and (mode.rotation ~= 3 or (mode.rotation == 3 and GetUnitIsUnit(thisUnit, "target"))) then
+            if (not noDotCheck(thisUnit) or GetUnitIsUnit(thisUnit, "target")) and not UnitIsDeadOrGhost(thisUnit) and (mode.rotation ~= 2 or (mode.rotation == 2 and GetUnitIsUnit(thisUnit, "target"))) then
                 local enemyUnit = {}
                 enemyUnit.unit = thisUnit
                 enemyUnit.ttd = ttd(thisUnit)
@@ -451,7 +503,7 @@ local function runRotation()
     if stealthedRogue == true then sRogue = 1 else sRogue = 0 end
     local enemies10 = #enemyTable10
 
-    if isChecked("Ignore Blacklist for FoK and CT") and mode.rotation ~= 3 then
+    if isChecked("Ignore Blacklist for FoK and CT") and mode.rotation ~= 2 then
         enemies10 = #enemies.get(10, nil, nil, nil, spell.pickPocket)
     end
 
@@ -585,9 +637,7 @@ local function runRotation()
                     end
                 end
             end
-            if isChecked("Health Pot / Healthstone") and (use.able.healthstone() or canUseItem(152494))
-            and php <= getOptionValue("Health Pot / Healthstone") and inCombat and (hasItem(152494) or has.healthstone())
-            then
+            if isChecked("Health Pot / Healthstone") and (use.able.healthstone() or canUseItem(152494)) and php <= getOptionValue("Health Pot / Healthstone") and inCombat and (hasItem(152494) or has.healthstone()) then
                 if use.able.healthstone() then
                     use.healthstone()
                 elseif canUseItem(152494) then
@@ -599,6 +649,9 @@ local function runRotation()
             end
             if isChecked("Crimson Vial") and php < getOptionValue("Crimson Vial") then
                 if cast.crimsonVial() then return true end
+            end
+            if isChecked("Concentrated Flame") and php < getOptionValue("Concentrated Flame") then
+                if cast.concentratedFlame("player") then return true end
             end
             if isChecked("Evasion") and php < getOptionValue("Evasion") and inCombat and not stealth then
                 if cast.evasion() then return true end
@@ -750,7 +803,7 @@ local function runRotation()
         if useCDs() and ttd("target") > getOptionValue("CDs TTD Limit") and targetDistance < 5 then
             -- # Vendetta outside stealth with Rupture up. With Subterfuge talent and Shrouded Suffocation power always use with buffed Garrote. With Nightstalker and Exsanguinate use up to 5s (3s with DS) before Vanish combo.
             -- actions.cds+=/vendetta,if=!stealthed.rogue&dot.rupture.ticking&(!talent.subterfuge.enabled|!azerite.shrouded_suffocation.enabled|dot.garrote.pmultiplier>1&(spell_targets.fan_of_knives<6|!cooldown.vanish.up))&(!talent.nightstalker.enabled|!talent.exsanguinate.enabled|cooldown.exsanguinate.remains<5-2*talent.deeper_stratagem.enabled)
-            if isChecked("Vendetta") and not stealthedRogue then
+            if isChecked("Vendetta") and not stealthedRogue and not debuff.vendetta.exists("target") then
                 if isChecked("Hold Vendetta") and (not talent.subterfuge or not trait.shroudedSuffocation.active or (debuff.garrote.applied("target") > 1 and (enemies10 < 6 or cd.vanish.remain() > 0)) or not isChecked("Vanish") or cd.vanish.remain() > 110) and (not talent.nightstalker or not talent.exsanguinate or (talent.exsanguinate and cd.exsanguinate.remain() < (5-2*dSEnabled))) and debuff.rupture.exists("target") then
                     if cast.vendetta("target") then return true end
                 end
@@ -790,6 +843,20 @@ local function runRotation()
                     if cast.vanish("player") then return true end
                 end
             end
+            if debuff.rupture.exists("target") then
+                --Worldvein Resonance
+                if cast.worldveinResonance("player") then return true end
+                --Memory of lucid Dreams
+                if energyDeficit > (25 + energyRegenCombined) and (not isChecked("Vendetta") or (cd.vendetta.exists() and cd.vendetta.remain() < 115)) then
+                    if cast.memoryOfLucidDreams("player") then return true end
+                end
+                --Guardian
+                if cast.guardianOfAzeroth("player") then return true end
+                --Blood Of The Enemy
+                if cast.bloodOfTheEnemy("player") then return true end
+                --The Unbound Force
+                if cast.theUnboundForce("target") then return true end
+            end
         end
         -- # Exsanguinate when both Rupture and Garrote are up for long enough
         -- actions.cds+=/exsanguinate,if=dot.rupture.remains>4+4*cp_max_spend&!dot.garrote.refreshable
@@ -799,6 +866,16 @@ local function runRotation()
         -- actions.cds+=/toxic_blade,if=dot.rupture.ticking
         if talent.toxicBlade and mode.tb == 1 and ttd("target") > 3 and getSpellCD(spell.toxicBlade) == 0 and debuff.rupture.exists("target") then
             if cast.toxicBlade("target") then return true end
+        end
+        if debuff.rupture.exists("target") then
+            -- Concentrated Flame
+            if ttd("target") > 3 then
+                if cast.concentratedFlame("target") then return true end
+            end
+            --Beamers
+            if standingTime > 1 and isChecked("Focused Azerite Beam") then
+                if castBeam(getOptionValue("Focused Azerite Beam"), true, 3) then return true end
+            end
         end
     end
 
@@ -978,7 +1055,7 @@ local function runRotation()
 --- Rotations ---
 -----------------
     -- Pause
-    if IsMounted() or IsFlying() or pause() or mode.rotation==4 then
+    if IsMounted() or IsFlying() or pause() then
         return true
     else
 ---------------------------------

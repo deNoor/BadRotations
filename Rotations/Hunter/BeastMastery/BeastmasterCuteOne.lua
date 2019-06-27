@@ -81,6 +81,8 @@ local function createOptions()
             br.ui:createSpinnerWithout(section, "Units To AoE", 2, 1, 10, 1, "|cffFFFFFFSet to desired units to start AoE at.")
             -- Misdirection
             br.ui:createDropdownWithout(section,"Misdirection", {"|cff00FF00Tank","|cffFFFF00Focus","|cffFF0000Pet"}, 1, "|cffFFFFFFSelect target to Misdirect to.")
+            -- Essence: Concentrated Flames 
+            br.ui:createCheckbox(section,"Concentrated Flames")
             -- Opener
             br.ui:createCheckbox(section, "Opener")
         br.ui:checkSectionState(section)
@@ -828,6 +830,11 @@ actionList.St = function()
     if cast.able.killCommand() then
         if cast.killCommand() then return end
     end
+    -- Concentrated Flame 
+    -- AMR Use Logic
+    if isChecked("Concentrated Flame") and cast.able.concentratedFlame() and charges.concentratedFlame.frac() > 1.7 then 
+        if cast.concentratedFlame() then return end 
+    end
     -- Chimaera Shot
     -- chimaera_shot
     if cast.able.chimaeraShot() then
@@ -851,6 +858,11 @@ actionList.St = function()
     -- barrage
     if isChecked("A Murder Of Crows / Barrage") and cast.able.barrage() then
         if cast.barrage() then return end
+    end    
+    -- Concentrated Flame 
+    -- AMR Use Logic
+    if isChecked("Concentrated Flame") and cast.able.concentratedFlame() then 
+        if cast.concentratedFlame() then return end 
     end
     -- Cobra Shot
     -- cobra_shot,if=(focus-cost+focus.regen*(cooldown.kill_command.remains-1)>action.kill_command.cost|cooldown.kill_command.remains>1+gcd)&cooldown.kill_command.remains>1
@@ -920,6 +932,11 @@ actionList.Cleave = function()
     if isChecked("A Murder Of Crows / Barrage") and cast.able.barrage() then
         if cast.barrage() then return end
     end
+    -- Concentrated Flame 
+    -- AMR Use Logic
+    if isChecked("Concentrated Flame") and cast.able.concentratedFlame() and charges.concentratedFlame.frac() > 1.7 then 
+        if cast.concentratedFlame() then return end 
+    end
     -- Kill Command
     -- kill_command,if=active_enemies<4|!azerite.rapid_reload.enabled
     if cast.able.killCommand() and (#enemies.yards8p < 4 or not traits.rapidReload.active) then
@@ -938,6 +955,11 @@ actionList.Cleave = function()
     then
         if cast.barbedShot(lowestBarbedShot) then return end
     end
+    -- Concentrated Flame 
+    -- AMR Use Logic
+    if isChecked("Concentrated Flame") and cast.able.concentratedFlame() then 
+        if cast.concentratedFlame() then return end 
+    end
     -- Multishot
     -- multishot,if=azerite.rapid_reload.enabled&active_enemies>2
     if cast.able.multishot() and traits.rapidReload.active then
@@ -952,7 +974,7 @@ actionList.Cleave = function()
     -- spitting_cobra
     if isChecked("Spitting Cobra") and talent.spittingCobra and cast.able.spittingCobra() then
         if cast.spittingCobra() then return end
-    end
+    end    
 end -- End Action List - Cleave
 
 -- Action List - PreCombat
