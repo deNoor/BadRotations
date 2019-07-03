@@ -20,6 +20,7 @@ function cCharacter:new(class)
   self.dynLastUpdate  = 0         -- Timer variable to reduce Dynamic Target updating
   self.dynTargetTimer = 0.5       -- Timer to reduce Dynamic Target updating (1/X = calls per second)
 	self.enemies  	    = {}        -- Number of Enemies around player (must be overwritten by cCLASS or cSPEC)
+	self.essence 				= {} 				-- Azerite Essence
 	self.equiped 	    	= {} 	-- Item Equips
 	self.gcd            = 1.5       -- Global Cooldown
 	self.gcdMax 	    	= 1.5 	-- GLobal Max Cooldown
@@ -219,7 +220,7 @@ function cCharacter:new(class)
     function self.startRotation()
     	local startTime = debugprofilestop()
         -- dont check if player is casting to allow off-cd usage and cast while other spell is casting
-        if pause(true) then return end
+        -- if pause(true) then return end
 
         if self.rotation ~= nil then
         	self.rotation.run()

@@ -81,8 +81,8 @@ local function createOptions()
             br.ui:createSpinnerWithout(section, "Units To AoE", 2, 1, 10, 1, "|cffFFFFFFSet to desired units to start AoE at.")
             -- Misdirection
             br.ui:createDropdownWithout(section,"Misdirection", {"|cff00FF00Tank","|cffFFFF00Focus","|cffFF0000Pet"}, 1, "|cffFFFFFFSelect target to Misdirect to.")
-            -- Essence: Concentrated Flames 
-            br.ui:createCheckbox(section,"Concentrated Flames")
+            -- Heart Essence
+            br.ui:createCheckbox(section,"Use Essence")
             -- Opener
             br.ui:createCheckbox(section, "Opener")
         br.ui:checkSectionState(section)
@@ -221,6 +221,7 @@ local use
 local actionList
 local critChance
 local flying
+local haltProfile
 local hastar
 local healPot
 local leftCombat
@@ -302,15 +303,15 @@ actionList.PetManagement = function()
     end
     if isChecked("Auto Attack/Passive") then
         -- Set Pet Mode Out of Comat / Set Mode Passive In Combat
-        if (not inCombat and petMode == "Passive") or (inCombat and (petMode == "Defensive" or petMode == "Passive")) then
+        if ((not inCombat and petMode == "Passive") or (inCombat and (petMode == "Defensive" or petMode == "Passive"))) and not haltProfile then
             PetAssistMode()
-        elseif not inCombat and petMode == "Assist" and #enemies.yards40nc > 0 then 
+        elseif not inCombat and petMode == "Assist" and #enemies.yards40nc > 0 and not haltProfile then 
             PetDefensiveMode()
-        elseif inCombat and petMode ~= "Passive" and #enemies.yards40 == 0 then
+        elseif petMode ~= "Passive" and ((inCombat and #enemies.yards40 == 0) or haltProfile) then
             PetPassiveMode()
         end
         -- Pet Attack / retreat
-        if (not UnitExists("pettarget") or not validTarget) and (inCombat or petCombat) and not buff.playDead.exists("pet") then
+        if (not UnitExists("pettarget") or not validTarget) and (inCombat or petCombat) and not buff.playDead.exists("pet") and not haltProfile then
             if getOptionValue("Pet Target") == 1 and isValidUnit(units.dyn40) then
                 PetAttack(units.dyn40)
             elseif getOptionValue("Pet Target") == 2 and validTarget then
@@ -321,7 +322,7 @@ actionList.PetManagement = function()
                     if (isValidUnit(thisUnit) or isDummy()) then PetAttack(thisUnit); break end
                 end
             end
-        elseif (not inCombat or (inCombat and not validTarget and not isValidUnit("target") and not isDummy())) and IsPetAttackActive() then
+        elseif (not inCombat or (inCombat and not validTarget and not isValidUnit("target") and not isDummy())) or haltProfile then --and IsPetAttackActive() then
             PetStopAttack()
             PetFollow()
         end
@@ -340,7 +341,7 @@ actionList.PetManagement = function()
         if cast.survivalOfTheFittest("pet") then return end
     end
     -- Bite/Claw
-    if isChecked("Bite / Claw") and petCombat and validTarget and petDistance < 5 then
+    if isChecked("Bite / Claw") and petCombat and validTarget and petDistance < 5 and not haltProfile then
         if cast.able.bite() then
             if cast.bite("pettarget","pet") then return end
         end
@@ -599,6 +600,25 @@ actionList.Cooldowns = function()
             --     if cast.potion() then return end
             -- end
         end
+        -- Heart Essence
+        if isChecked("Use Essence") then
+            -- worldvein_resonance
+            if cast.able.worldveinResonance() then
+                if cast.worldveinResonance() then return end 
+            end
+            -- guardian_of_azeroth
+            if cast.able.guardianOfAzeroth() then 
+                if cast.guardianOfAzeroth() then return end
+            end 
+            -- ripple_in_space
+            if cast.able.rippleInSpace() then 
+                if cast.rippleInSpace() then return end 
+            end
+            -- memory_of_lucid_dreams
+            if cast.able.memoryOfLucidDreams() then
+                if cast.memoryOfLucidDreams() then return end
+            end
+        end
         -- Aspect of the Wild
         -- aspect_of_the_wild,precast_time=1.1,if=!azerite.primal_instincts.enabled
         if isChecked("Aspect of the Wild") and cast.able.aspectOfTheWild() 
@@ -830,11 +850,6 @@ actionList.St = function()
     if cast.able.killCommand() then
         if cast.killCommand() then return end
     end
-    -- Concentrated Flame 
-    -- AMR Use Logic
-    if isChecked("Concentrated Flame") and cast.able.concentratedFlame() and charges.concentratedFlame.frac() > 1.7 then 
-        if cast.concentratedFlame() then return end 
-    end
     -- Chimaera Shot
     -- chimaera_shot
     if cast.able.chimaeraShot() then
@@ -854,20 +869,38 @@ actionList.St = function()
     then
         if cast.barbedShot() then return end
     end
+    -- Heart Essence
+    if isChecked("Use Essence") then
+        -- focused_azerite_beam
+        if cast.able.focusedAzeriteBeam() then
+            if cast.focusedAzeriteBeam() then return end
+        end
+        -- purifying_blast
+        if cast.able.purifyingBlast() then
+            if cast.purifyingBlast() then return end
+        end
+        -- concentrated_flame
+        if cast.able.concentratedFlame() then
+            if cast.concentratedFlame() then return end
+        end
+        -- blood_of_the_enemy
+        if cast.able.bloodOfTheEnemy() then
+            if cast.bloodOfTheEnemy() then return end
+        end
+        -- the_unbound_force
+        if cast.able.theUnboundForce() then
+            if cast.theUnboundForce() then return end
+        end
+    end
     -- Barrage
     -- barrage
     if isChecked("A Murder Of Crows / Barrage") and cast.able.barrage() then
         if cast.barrage() then return end
-    end    
-    -- Concentrated Flame 
-    -- AMR Use Logic
-    if isChecked("Concentrated Flame") and cast.able.concentratedFlame() then 
-        if cast.concentratedFlame() then return end 
     end
     -- Cobra Shot
-    -- cobra_shot,if=(focus-cost+focus.regen*(cooldown.kill_command.remains-1)>action.kill_command.cost|cooldown.kill_command.remains>1+gcd)&cooldown.kill_command.remains>1
+    -- cobra_shot,if=(focus-cost+focus.regen*(cooldown.kill_command.remains-1)>action.kill_command.cost|cooldown.kill_command.remains>1+gcd|buff.memory_of_lucid_dreams.up)&cooldown.kill_command.remains>1
     if cast.able.cobraShot() and ((focus - cast.cost.cobraShot() + focusRegen * (cd.killCommand.remain() - 1) > cast.cost.killCommand() 
-        or cd.killCommand.remain() > 1 + gcdMax) and cd.killCommand.remain() > 1) 
+        or cd.killCommand.remain() > 1 + gcdMax or buff.memoryOfLucidDreams.exists()) and cd.killCommand.remain() > 1) 
     then
         if cast.cobraShot() then return end
     end
@@ -932,11 +965,6 @@ actionList.Cleave = function()
     if isChecked("A Murder Of Crows / Barrage") and cast.able.barrage() then
         if cast.barrage() then return end
     end
-    -- Concentrated Flame 
-    -- AMR Use Logic
-    if isChecked("Concentrated Flame") and cast.able.concentratedFlame() and charges.concentratedFlame.frac() > 1.7 then 
-        if cast.concentratedFlame() then return end 
-    end
     -- Kill Command
     -- kill_command,if=active_enemies<4|!azerite.rapid_reload.enabled
     if cast.able.killCommand() and (#enemies.yards8p < 4 or not traits.rapidReload.active) then
@@ -955,10 +983,28 @@ actionList.Cleave = function()
     then
         if cast.barbedShot(lowestBarbedShot) then return end
     end
-    -- Concentrated Flame 
-    -- AMR Use Logic
-    if isChecked("Concentrated Flame") and cast.able.concentratedFlame() then 
-        if cast.concentratedFlame() then return end 
+    -- Heart Essence
+    if isChecked("Use Essence") then
+        -- focused_azerite_beam
+        if cast.able.focusedAzeriteBeam() then
+            if cast.focusedAzeriteBeam() then return end
+        end
+        -- purifying_blast
+        if cast.able.purifyingBlast() then
+            if cast.purifyingBlast() then return end
+        end
+        -- concentrated_flame
+        if cast.able.concentratedFlame() then
+            if cast.concentratedFlame() then return end
+        end
+        -- blood_of_the_enemy
+        if cast.able.bloodOfTheEnemy() then
+            if cast.bloodOfTheEnemy() then return end
+        end
+        -- the_unbound_force
+        if cast.able.theUnboundForce() then
+            if cast.theUnboundForce() then return end
+        end
     end
     -- Multishot
     -- multishot,if=azerite.rapid_reload.enabled&active_enemies>2
@@ -1062,6 +1108,7 @@ local function runRotation()
     pullTimer                          = PullTimerRemain()
     thp                                = getHP
     ttd                                = getTTD
+    haltProfile                        = (inCombat and profileStop) or (IsMounted() or IsFlying()) or pause() or buff.feignDeath.exists() or mode.rotation==4
 
     -- Get Best Unit for Range
     -- units.get(range, aoe)
@@ -1069,14 +1116,14 @@ local function runRotation()
 
     -- Get List of Enemies for Range
     -- enemies.get(range, from unit, no combat, variable)
-    enemies.get(8,"target")
     enemies.get(40)
     enemies.get(40,"player",false,true)
     enemies.get(40,"player",true)
-    enemies.get(5,"pet")
-    enemies.get(8,"pet")
-    enemies.get(20,"pet")
     enemies.get(30,"pet")
+    enemies.get(20,"pet")
+    enemies.get(8,"pet")
+    enemies.get(8,"target")
+    enemies.get(5,"pet")
 
     -- General Vars
     if isChecked("Spirit Mend") then br.friend:Update() end
@@ -1115,11 +1162,11 @@ local function runRotation()
     -- Profile Stop | Pause
     if not inCombat and not hastar and profileStop then
         profileStop = false
-    elseif (inCombat and profileStop) or (IsMounted() or IsFlying()) or pause() or buff.feignDeath.exists() or mode.rotation==4 then
-        if isChecked("Auto Attack/Passive") and pause() and IsPetAttackActive() then
-            PetStopAttack()
-            PetFollow()
-        end
+    elseif haltProfile then
+        -----------------
+        --- Pet Logic ---
+        -----------------
+        if actionList.PetManagement() then return true end
         if cast.able.playDead() and cast.last.feignDeath() and not buff.playDead.exists("pet") then
             if cast.playDead() then return end
         end

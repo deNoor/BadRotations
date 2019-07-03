@@ -41,7 +41,7 @@ local function createToggles()
   DPSModes = {
     [1] = { mode = "On", value = 1, overlay = "DPS Enabled", tip = "DPS Enabled", highlight = 0, icon = br.player.spell.judgment },
     [2] = { mode = "Off", value = 2, overlay = "DPS Disabled", tip = "DPS Disabled", highlight = 0, icon = br.player.spell.judgment },
-    [3] = { mode = "Max", value = 3, overlay = "DPS Burst", tip = "DPS Bursting", highlight = 0, icon = br.player.spell.avengingWrath }
+    [3] = { mode = "Max", value = 3, overlay = "DPS Burst", tip = "DPS MAX", highlight = 0, icon = br.player.spell.avengingWrath }
   };
   CreateButton("DPS", 6, 0)
 end
@@ -83,8 +83,6 @@ local function createOptions()
     -- Overhealing Cancel
     br.ui:createSpinner(section, "Overhealing Cancel", 99, 0, 100, 1, "", "|cffFFFFFFSet Desired Threshold at which you want to prevent your own casts")
     br.ui:createCheckbox(section, "OOC Healing", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFout of combat healing|cffFFBB00.", 1)
-    br.ui:createSpinner(section, "ConcentratedFlame - Heal", 5, 0, 100, 5, "", "health to heal at")
-    br.ui:createCheckbox(section, "ConcentratedFlame - DPS")
 
     br.ui:checkSectionState(section)
     -- Raid
@@ -184,6 +182,15 @@ local function createOptions()
     -- Aura Mastery
     br.ui:createSpinner(section, "Aura Mastery", 50, 0, 100, 5, "", "|cffFFFFFFHealth Percent to Cast At")
     br.ui:createSpinner(section, "Aura Mastery Targets", 3, 0, 40, 1, "", "|cffFFFFFFMinimum Aura Mastery Targets", true)
+    br.ui:checkSectionState(section)
+
+    -- Essences
+    --"Memory of Lucid Dreams"
+    section = br.ui:createSection(br.ui.window.profile, "Essences")
+    br.ui:createSpinner(section, "ConcentratedFlame - Heal", 50, 0, 100, 5, "", "health to heal at")
+    br.ui:createCheckbox(section, "ConcentratedFlame - DPS")
+    br.ui:createSpinner(section, "Memory of Lucid Dreams", 50, 0, 100, 5, "", "mana to pop it at")
+    br.ui:createSpinner(section, "Ever Rising Tide", 30, 0, 100, 5, "", "min mana to use")
     br.ui:checkSectionState(section)
 
     -------------------------
@@ -347,8 +354,10 @@ local function runRotation()
   local php = br.player.health
   local spell = br.player.spell
   local talent = br.player.talent
+  local essence = br.player.essence
   local gcd = br.player.gcdMax
   local charges = br.player.charges
+  local cd = br.player.cd
   local debuff = br.player.debuff
   local drinking = getBuffRemain("player", 192002) ~= 0 or getBuffRemain("player", 167152) ~= 0 or getBuffRemain("player", 192001) ~= 0
   local resable = UnitIsPlayer("target") and UnitIsDeadOrGhost("target") and GetUnitIsFriend("target", "player") and UnitInRange("target")
@@ -881,7 +890,7 @@ local function runRotation()
           end
         end]]
 
-        if canDispel(br.friend[i].unit, spell.cleanse) and
+        if canDispel(br.friend[i].unit, spell.cleanse) and getLineOfSight(br.friend[i].unit) and
                 ((GetMinimapZoneText() == "Shrine of Shadows" and isChecked("Shrine - Dispel Whisper of Power"))
                         or GetMinimapZoneText() ~= "Shrine of Shadows") then
           if cast.cleanse(br.friend[i].unit) then
@@ -1005,15 +1014,37 @@ local function runRotation()
     local layOnHandsTarget = nil
     local burst = nil
 
-    if isChecked("ConcentratedFlame - Heal") and lowest.hp <= getValue("ConcentratedFlame - Heal") then
-      if cast.concentratedFlame(lowest.unit) then
-        return true
+    --Essences
+    --Concentrated Flame
+
+    -- Concentrated Flame Heal
+
+    if essence.concentratedFlame.active and getSpellCD(295373) <= gcd then
+      if isChecked("ConcentratedFlame - Heal") and lowest.hp <= getValue("ConcentratedFlame - Heal") and getLineOfSight(lowest.unit) and getDistance(lowest.unit) <= 40 then
+        if cast.concentratedFlame(lowest.unit) then
+          return true
+        end
+      end
+      if isChecked("ConcentratedFlame - DPS") and getTTD("target") > 3 and getLineOfSight("target") and getDistance("target") <= 40 then
+        if cast.concentratedFlame("target") then
+          return true
+        end
       end
     end
+    --lucid dreams
+    if isChecked("Memory of Lucid Dreams") and getSpellCD(298357) <= gcd
+            and mana <= getValue("Memory of Lucid Dreams") then
+      if cast.memoryOfLucidDreams() then
+        return
+      end
+    end
+    -- the ever rising ride
+    --overchargeMana
 
-    if isChecked("ConcentratedFlame - DPS") then
-      if cast.concentratedFlame("target") then
-        return true
+    if isChecked("Ever Rising Tide") and essence.overchargeMana.active and getSpellCD(296072) <= gcd
+            and mana >= getValue("Ever Rising Tide") then
+      if cast.overchargeMana() then
+        return
       end
     end
 
@@ -1382,7 +1413,7 @@ local function runRotation()
             end
           end
           -- Holy Shock  ((inInstance and getDistance(units.dyn40, tanks[1].unit) <= 10 or not inInstance))
-          if isChecked("Holy Shock Damage") and cast.able.holyShock() and ((inInstance and #tanks > 0 and getDistance(units.dyn40, tanks[1].unit) <= 10 or solo)) then
+          if isChecked("Holy Shock Damage") and cast.able.holyShock() and ((inInstance and #tanks > 0 and getDistance(units.dyn40, tanks[1].unit) <= 10 or solo or getDistance(tanks[1].unit) == 100 )) then
             if not debuff.glimmerOfLight.exists(thisUnit) then
               if cast.holyShock(thisUnit) then
                 return true
@@ -1533,7 +1564,7 @@ local function runRotation()
 
     --Avenging Crusader (216331)  UnitBuffID("player", 216331)
     if buff.avengingCrusader.exists("player") and getFacing("player", "target") then
-      if mode.DPS == 1 and
+      if mode.DPS == 1 or mode.DPS == 3 and
               isChecked("DPS Mana") and mana > getValue("DPS Mana") or not isChecked("DPS Mana") and
               isChecked("DPS Health") and lowest.hp > getValue("DPS Health") or not isChecked("DPS Health") and lowest.hp > getValue("Critical HP") then
         if cast.able.holyShock() and ((inInstance and #tanks > 0 and getDistance(units.dyn40, tanks[1].unit) <= 10 or solo)) then
@@ -1559,11 +1590,11 @@ local function runRotation()
     end
 
 
-    --Wings, burst mode
+    --Wings, burst mode MAX dps
     if mode.DPS == 3 and (buff.avengingWrath.exists() or buff.avengingCrusader.exists("player")) or (GetMinimapZoneText() == "Shrine of Shadows" and getUnitID("target") == 136295) and getFacing("player", "target") then
       if isChecked("DPS Mana") and mana > getValue("DPS Mana") or not isChecked("DPS Mana") and
               isChecked("DPS Health") and lowest.hp > getValue("DPS Health") or not isChecked("DPS Health") and lowest.hp > getValue("Critical HP") then
-        if cast.able.holyShock() and ((inInstance and #tanks > 0 and getDistance(units.dyn40, tanks[1].unit) <= 10 or solo)) then
+        if cast.able.holyShock() and ((inInstance and #tanks > 0 and getDistance(units.dyn40, tanks[1].unit) <= 10 or solo or inRaid)) then
           for i = 1, #enemies.yards40 do
             local thisUnit = enemies.yards40[i]
             if not debuff.glimmerOfLight.exists(thisUnit) then
@@ -1603,7 +1634,7 @@ local function runRotation()
     --Glimmer support
 
     if mode.Glimmer == 3 and (inInstance or inRaid) and #tanks > 0 then
-      if not buff.glimmerOfLight.exists(tanks[1].unit) and not UnitBuffID(tanks[1].unit, 115191) then
+      if not buff.glimmerOfLight.exists(tanks[1].unit) and not UnitBuffID(tanks[1].unit, 115191) and getLineOfSight(tanks[1].unit, "player") then
         if cast.holyShock(tanks[1].unit) then
         end
       end
