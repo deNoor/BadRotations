@@ -103,10 +103,10 @@ local function createOptions()
     br.ui:createCheckbox(section, "Freehold - pig", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFCatches pig in Freehold|cffFFBB00.", 1)
     br.ui:createCheckbox(section, "Freehold - Blackout Barrel", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFBubble blacout barrel|cffFFBB00.", 1)
     br.ui:createCheckbox(section, "Atal - Devour", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFBubble Devour target|cffFFBB00.", 1)
-    br.ui:createCheckbox(section, "Motherload - Stun jockeys", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFBubble Devour target|cffFFBB00.", 1)
-    br.ui:createCheckbox(section, "Tol Dagor - Deadeye", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFBubble Devour target|cffFFBB00.", 1)
+    br.ui:createCheckbox(section, "Motherload - Stun jockeys", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFStun ...jockeys ... |cffFFBB00.", 1)
+    br.ui:createCheckbox(section, "Tol Dagor - Deadeye", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFBubble Deadeye target|cffFFBB00.", 1)
     br.ui:createCheckbox(section, "Waycrest - jagged Nettles", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFBubble Nettles target|cffFFBB00.", 1)
-    br.ui:createCheckbox(section, "Shrine - Dispel Whisper of Power", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFBubble Devour target|cffFFBB00.", 0)
+    br.ui:createCheckbox(section, "Shrine - Dispel Whisper of Power", "|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFto dispel or not :)|cffFFBB00.", 0)
     br.ui:createCheckbox(section, "Dont DPS spotter", "wont DPS spotter", 1)
 
 
@@ -170,6 +170,7 @@ local function createOptions()
     -- Avenging Wrath/Crusader
     br.ui:createSpinner(section, "Avenging Crusader", 50, 0, 100, 5, "", "|cffFFFFFFHealth Percent to Cast At")
     br.ui:createSpinner(section, "Avenging Crusader Targets", 4, 0, 40, 1, "", "|cffFFFFFFMinimum Avenging Wrath Targets", true)
+    br.ui:createSpinner(section, "Avenging Crusader Targets", 4, 0, 40, 1, "", "|cffFFFFFFMinimum Avenging Wrath Targets", true)
     br.ui:createSpinner(section, "Avenging Wrath", 50, 0, 100, 5, "", "|cffFFFFFFHealth Percent to Cast At")
     br.ui:createSpinner(section, "Avenging Wrath Targets", 4, 0, 40, 1, "", "|cffFFFFFFMinimum Avenging Wrath Targets", true)
 
@@ -190,7 +191,10 @@ local function createOptions()
     br.ui:createSpinner(section, "ConcentratedFlame - Heal", 50, 0, 100, 5, "", "health to heal at")
     br.ui:createCheckbox(section, "ConcentratedFlame - DPS")
     br.ui:createSpinner(section, "Memory of Lucid Dreams", 50, 0, 100, 5, "", "mana to pop it at")
-    br.ui:createSpinner(section, "Ever Rising Tide", 30, 0, 100, 5, "", "min mana to use")
+    br.ui:createDropdown(section, "Ever Rising Tide", { "Always", "Pair with CDs", "Based on health" }, 1, "When to use this essence")
+    br.ui:createSpinner(section, "Ever Rising Tide - Mana", 30, 0, 100, 5, "", "min mana to use")
+    br.ui:createSpinner(section, "Ever Rising Tide - Health", 30, 0, 100, 5, "", "health threshold to pop at")
+    br.ui:createSpinner(section, "Well of Existence  - Health", 30, 0, 100, 5, "", "health threshold to pop at")
     br.ui:checkSectionState(section)
 
     -------------------------
@@ -254,7 +258,6 @@ local function createOptions()
     br.ui:createSpinner(section, "Light's Hammer Damage", 3, 0, 40, 1, "", "|cffFFFFFFMinimum Light's Hammer Targets")
     -- Judgment
     br.ui:createCheckbox(section, "Judgment - DPS")
-
     -- Holy Shock
     br.ui:createCheckbox(section, "Holy Shock Damage")
     -- Crusader Strike
@@ -890,7 +893,7 @@ local function runRotation()
           end
         end]]
 
-        if canDispel(br.friend[i].unit, spell.cleanse) and getLineOfSight(br.friend[i].unit) and
+        if canDispel(br.friend[i].unit, spell.cleanse) and getLineOfSight(br.friend[i].unit) and getDistance(br.friend[i].unit) <= 40 and
                 ((GetMinimapZoneText() == "Shrine of Shadows" and isChecked("Shrine - Dispel Whisper of Power"))
                         or GetMinimapZoneText() ~= "Shrine of Shadows") then
           if cast.cleanse(br.friend[i].unit) then
@@ -1018,7 +1021,6 @@ local function runRotation()
     --Concentrated Flame
 
     -- Concentrated Flame Heal
-
     if essence.concentratedFlame.active and getSpellCD(295373) <= gcd then
       if isChecked("ConcentratedFlame - Heal") and lowest.hp <= getValue("ConcentratedFlame - Heal") and getLineOfSight(lowest.unit) and getDistance(lowest.unit) <= 40 then
         if cast.concentratedFlame(lowest.unit) then
@@ -1041,10 +1043,36 @@ local function runRotation()
     -- the ever rising ride
     --overchargeMana
 
-    if isChecked("Ever Rising Tide") and essence.overchargeMana.active and getSpellCD(296072) <= gcd
-            and mana >= getValue("Ever Rising Tide") then
-      if cast.overchargeMana() then
-        return
+    if isChecked("Ever Rising Tide") and essence.overchargeMana.active and getSpellCD(296072) <= gcd then
+
+      if getOptionValue("Ever Rising Tide") == 1 then
+        if cast.overchargeMana() then
+          return
+        end
+      end
+
+      if getOptionValue("Ever Rising Tide") == 2 then
+        if (buff.avengingWrath.exists("player") and not mode.DPS == 3) or buff.avengingCrusader.exists() or buff.holyAvenger.exists() or buff.auraMastery.exists() or burst == true then
+          if cast.overchargeMana() then
+            return
+          end
+        end
+      end
+      if getOptionValue("Ever Rising Tide") == 3 then
+        if lowest.hp < getOptionValue("Ever Rising Tide - Health") or burst == true then
+          if cast.overchargeMana() then
+            return
+          end
+        end
+      end
+    end
+
+    --"Well of Existence  - Health"
+    if isChecked("Well of Existence  - Health") and essence.refreshment.active and getSpellCD(296197) <= gcd then
+      if lowest.hp < getOptionValue("Well of Existence  - Health") or burst == true then
+        if cast.refreshment(lowest.unit) then
+          return true
+        end
       end
     end
 
@@ -1412,19 +1440,30 @@ local function runRotation()
               return true
             end
           end
-          -- Holy Shock  ((inInstance and getDistance(units.dyn40, tanks[1].unit) <= 10 or not inInstance))
-          if isChecked("Holy Shock Damage") and cast.able.holyShock() and ((inInstance and #tanks > 0 and getDistance(units.dyn40, tanks[1].unit) <= 10 or solo or getDistance(tanks[1].unit) == 100 )) then
-            if not debuff.glimmerOfLight.exists(thisUnit) then
-              if cast.holyShock(thisUnit) then
-                return true
-              end
-            end
+        end
+      end
+
+      if isChecked("Holy Shock Damage") and cast.able.holyShock() and
+              (
+                      (inInstance and #tanks > 0 and getDistance(units.dyn40, tanks[1].unit) <= 10)
+                              or (inInstance and #tanks == 0)
+                              or solo
+                              or (inInstance and #tanks > 0 and getDistance(tanks[1].unit) >= 90)
+              ) then
+        for i = 1, #enemies.yards40 do
+          local thisUnit = enemies.yards40[i]
+          if not debuff.glimmerOfLight.exists(thisUnit) and not noDamageCheck(thisUnit) and not UnitIsDeadOrGhost(thisUnit) then
             if cast.holyShock(thisUnit) then
               return true
             end
           end
         end
+        if cast.holyShock(thisUnit) then
+          return true
+        end
+
       end
+
       -- Crusader Strike
       for i = 1, #enemies.yards5 do
         local thisUnit = enemies.yards5[i]
@@ -1839,10 +1878,10 @@ local function runRotation()
           if br.friend[i].hp <= getValue("Holy Light") and br.friend[i].distance <= (10 * master_coff) then
             holyLight10 = br.friend[i].unit
           end
-          if br.friend[i].hp <= getValue("Holy Light") and br.friend[i].distance <= (10 * master_coff) then
+          if br.friend[i].hp <= getValue("Holy Light") and br.friend[i].distance <= (20 * master_coff) then
             holyLight20 = br.friend[i].unit
           end
-          if br.friend[i].hp <= getValue("Holy Light") and br.friend[i].distance <= (10 * master_coff) then
+          if br.friend[i].hp <= getValue("Holy Light") and br.friend[i].distance <= (30 * master_coff) then
             holyLight30 = br.friend[i].unit
           end
         end

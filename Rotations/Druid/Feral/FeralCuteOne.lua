@@ -55,6 +55,7 @@ local function createOptions()
         local section
         -- General Options
         section = br.ui:createSection(br.ui.window.profile, "General")
+            -- br.ui:createCheckbox(section, "Garbage")
             -- APL
             br.ui:createDropdownWithout(section, "APL Mode", {"|cffFFFFFFSimC"}, 1, "|cffFFFFFFSet APL Mode to use.")
             -- Death Cat
@@ -677,7 +678,7 @@ actionList.Cooldowns = function()
             -- Essence: The Unbound Force
             -- the_unbound_force,if=buff.reckless_force.up|buff.tigers_fury.up
             if cast.able.theUnboundForce()
-                and (buff.recklessness.exists() or buff.tigersFury.exists())
+                and (buff.recklessForce.exists() or buff.tigersFury.exists())
             then
                 if cast.theUnboundForce() then debug("Casting The Unbound Force") return true end
             end
@@ -703,12 +704,14 @@ actionList.Cooldowns = function()
             -- Essence: Focused Azerite Beam
             -- focused_azerite_beam,if=active_enemies>desired_targets|(raid_event.adds.in>90&energy.deficit>=50)
             if cast.able.focusedAzeriteBeam() and (#enemies.yards8f >= 3 or (useCDs() and energyDeficit >= 50)) then
-                if cast.focusedAzeriteBeam() then debug("Casting Focused Azerite Beam") return true end
+                local minCount = useCDs() and 1 or 3
+                if cast.focusedAzeriteBeam(nil,"cone",minCount, 8) then debug("Casting Focused Azerite Beam") return true end
             end
             -- Essence: Purifying Blast
             -- purifying_blast,if=active_enemies>desired_targets|raid_event.adds.in>60
             if cast.able.purifyingBlast() and (#enemies.yards8t >= 3 or useCDs()) then
-                if cast.purifyingBlast() then debug("Casting Purifying Blast") return true end
+                local minCount = useCDs() and 1 or 3
+                if cast.purifyingBlast("best", nil, minCount, 8) then debug("Casting Purifying Blast") return true end
             end
             -- Essence: Heart Essence
             -- heart_essence,if=buff.tigers_fury.up

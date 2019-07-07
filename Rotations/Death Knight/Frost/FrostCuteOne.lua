@@ -484,7 +484,7 @@ local function runRotation()
         -- Purifying Blast
             -- purifying_blast,if=!buff.pillar_of_frost.up&!buff.breath_of_sindragosa.up
             if useCDs() and cast.able.purifyingBlast() and not buff.pillarOfFrost.exists() and not breathOfSindragosaActive then
-                if cast.purifyingBlast() then return true end 
+                if cast.purifyingBlast("best", nil, 1, 8) then return true end
             end
         -- Worldvein Resonance
             -- worldvein_resonance,if=!buff.pillar_of_frost.up&!buff.breath_of_sindragosa.up
@@ -901,15 +901,6 @@ local function runRotation()
                 if buff.flaskOfTheCountlessArmies.exists() then buff.flaskOfTheCountlessArmies.cancel() end
                 if buff.felFocus.exists() then buff.felFocus.cancel() end
                 if use.oraliusWhisperingCrystal() then return true end
-            end
-        -- Flask / Crystal
-            -- flask,name=countless_armies
-            if isChecked("Flask / Crystal") and not (IsFlying() or IsMounted()) then
-                if (raid or solo) and not (buff.strenthFlaskLow or buff.strengthFlaskBig) then--Draenor Str Flasks
-                    if not UnitBuffID("player",176151) and canUseItem(118922) then --Draenor Insanity Crystal
-                        if br.player.useCrystal() then return true end
-                    end
-                end
             end
         -- Food
             -- food,type=food,name=fishbrul_special
