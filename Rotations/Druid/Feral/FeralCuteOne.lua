@@ -703,7 +703,9 @@ actionList.Cooldowns = function()
         if isChecked("Use Essence") then
             -- Essence: Focused Azerite Beam
             -- focused_azerite_beam,if=active_enemies>desired_targets|(raid_event.adds.in>90&energy.deficit>=50)
-            if cast.able.focusedAzeriteBeam() and (#enemies.yards8f >= 3 or (useCDs() and energyDeficit >= 50)) then
+            if cast.able.focusedAzeriteBeam() and (#enemies.yards8f >= 3 or (useCDs() and energyDeficit >= 50))
+                and not (buff.tigersFury.exists() or buff.berserk.exists() or buff.incarnationKingOfTheJungle.exists())
+            then
                 local minCount = useCDs() and 1 or 3
                 if cast.focusedAzeriteBeam(nil,"cone",minCount, 8) then debug("Casting Focused Azerite Beam") return true end
             end
@@ -772,10 +774,22 @@ actionList.Cooldowns = function()
                 and getDistance(units.dyn5) < 5
             then
                 for i = 13, 14 do
-                    if use.able.slot(i) then
+                    if use.able.slot(i) and (not equiped.pocketSizedComputationDevice(i) 
+                        or (equiped.pocketSizedComputationDevice(i) and not equiped.socket.pocketSizedComputationDevice(167672,1))) 
+                    then
                         use.slot(i)
                         debug("Using Trinket [Slot "..i.."]") 
                     end
+                end
+            end
+        end
+        if useCDs() and equiped.pocketSizedComputationDevice() and equiped.socket.pocketSizedComputationDevice(167672,1) and energy < 35
+            and not (buff.tigersFury.exists() or buff.berserk.exists() or buff.incarnationKingOfTheJungle.exists() or buff.memoryOfLucidDreams.exists())
+        then
+            for i = 13, 14 do
+                if use.able.slot(i) and equiped.pocketSizedComputationDevice(i) then
+                    use.slot(i)
+                    debug("Using Pocket Sized Computation Device [Slot "..i.."]") 
                 end
             end
         end
@@ -1208,10 +1222,12 @@ actionList.PreCombat = function()
         -- Rake/Shred
         -- buff.prowl.up|buff.shadowmeld.up
         if isValidUnit("target") and opener.complete and getDistance("target") < 5 then
-            if cast.able.shred("target") and level < 12 then
-                if cast.shred("target") then debug("Casting Shred on "..UnitName("target").." [Pull]"); return true end
-            elseif cast.able.rake("target") then
+            if cast.able.rake() and level >= 12
+                and debuff.rake.calc() > debuff.rake.applied("target") * 0.85
+            then
                 if cast.rake("target") then debug("Casting Rake on "..UnitName("target").." [Pull]"); return true end
+            elseif cast.able.shred() then
+                if cast.shred("target") then debug("Casting Shred on "..UnitName("target").." [Pull]"); return true end
             end
         end
     end -- End No Combat
@@ -1256,7 +1272,7 @@ local function runRotation()
     healPot                            = getHealthPot()
     inCombat                           = br.player.inCombat
     inRaid                             = br.player.instance=="raid"
-    item                               = br.player.spell.items
+    item                               = br.player.items
     level                              = br.player.level
     lootDelay                          = getOptionValue("LootDelay")
     lowestHP                           = br.friend[1].unit
@@ -1351,7 +1367,7 @@ local function runRotation()
     -- Profile Stop | Pause
     if not inCombat and not UnitExists("target") and profileStop==true then
         profileStop = false
-    elseif (inCombat and profileStop==true) or pause() or mode.rotation==4 then
+    elseif (inCombat and profileStop==true) or pause() or mode.rotation==4 or cast.current.focusedAzeriteBeam() then
         return true
     else
         -----------------------

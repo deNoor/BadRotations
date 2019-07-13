@@ -44,6 +44,40 @@ function br.loader.loadProfiles()
     end
 end
 
+function loadSupport(thisFile) -- Loads support rotation file from Class Folder
+    if thisFile == nil then return end
+    local class = select(2,UnitClass('player'))
+
+    local function getFolderClassName(class)
+        local formatClass = class:sub(1,1):upper()..class:sub(2):lower()
+        if formatClass == "Deathknight" then formatClass = "Death Knight" end
+        if formatClass == "Demonhunter" then formatClass = "Demon Hunter" end
+
+        return formatClass
+    end
+
+    local function rotationsDirectory()
+        return GetWoWDirectory() .. '\\Interface\\AddOns\\BadRotations\\Rotations\\'
+    end
+
+    local function profiles(class)
+        return GetDirectoryFiles(rotationsDirectory() .. class .. '\\Support\\' .. thisFile .. '.lua')
+    end
+
+    -- Search each Profile in the Spec Folder
+    if br.rotations.support == nil then br.rotations.support = {} end
+    wipe(br.rotations.support)
+    local folderClass = getFolderClassName(class)
+    local profile = ReadFile(rotationsDirectory()..folderClass..'\\Support\\'..thisFile..'.lua')
+    local loadProfile = loadstring(profile,thisFile..".lua")
+    if loadProfile == nil then
+        Print("|cffff0000Failed to Load - |r"..tostring(thisFile).."|cffff0000, contact dev.");
+    else
+        Print("Loaded Support Rotation: "..thisFile)
+        loadProfile()
+    end
+end
+
 function br.loader:new(spec,specName)
     local loadStart = debugprofilestop()
     local self = cCharacter:new(tostring(select(1,UnitClass("player"))))
@@ -58,7 +92,7 @@ function br.loader:new(spec,specName)
     self.profile = specName
 
     -- Mandatory !
-    self.rotation = br.rotations[spec][br.selectedProfile]    
+    self.rotation = br.rotations[spec][br.selectedProfile]
 
     -- Spells From Spell Table
     local function getSpellsForSpec(spec)
@@ -104,6 +138,8 @@ function br.loader:new(spec,specName)
             self.spell["racial"] = racialID
         end
     end
+
+    self.items = br.lists.items
 
     -- Update Talent Info
     local function getTalentInfo()
@@ -404,13 +440,14 @@ function br.loader:new(spec,specName)
 
 
         -- Cycle through Items List
-        for k,v in pairs(self.spell.items) do
-            if self.charges     == nil then self.charges    = {} end -- Item Charge Functions
-            if self.charges[k]  == nil then self.charges[k] = {} end -- Item Charge Subtables
-            if self.equiped     == nil then self.equiped    = {} end -- Use Item Debugging
-            if self.has         == nil then self.has        = {} end -- Item In Bags
-            if self.use         == nil then self.use        = {} end -- Use Item Functions
-            if self.use.able    == nil then self.use.able   = {} end -- Useable Item Check Functions
+        for k,v in pairs(self.items) do --self.spell.items) do
+            if self.charges         == nil then self.charges    = {} end -- Item Charge Functions
+            if self.charges[k]      == nil then self.charges[k] = {} end -- Item Charge Subtables
+            if self.equiped         == nil then self.equiped    = {} end -- Use Item Debugging
+            if self.equiped.socket  == nil then self.equiped.socket = {} end -- Item Socket Info
+            if self.has             == nil then self.has        = {} end -- Item In Bags
+            if self.use             == nil then self.use        = {} end -- Use Item Functions
+            if self.use.able        == nil then self.use.able   = {} end -- Useable Item Check Functions
 
             br.api.items(self.charges,k,v,"charges")
 

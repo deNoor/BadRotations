@@ -158,22 +158,6 @@ function getRacial()
     return racialSpells[race]
     -- return racialSpells[race]
 end
-function getHeirloomNeck()
-    local necks = {
-        eternalAmuletOfTheRedeemed  = 122663,
-        eternalEmberfuryTalisman    = 122667,
-        eternalHorizonChoker        = 122664,
-        eternalTalismanOfEvasion    = 122662,
-        eternalWillOfTheMartyr      = 122668,
-        eternalWovenIvyNecklace     = 122666,
-        manariTrainingAmulet        = 153130,
-    }
-    for i = 1, #necks do
-        local thisNeck = necks[i]
-        if hasEquiped(thisNeck,2) then return thisNeck end
-    end
-    return 0
-end
 if br.lists == nil then br.lists = {} end
 br.lists.spells = {
     DEATHKNIGHT = {
@@ -294,11 +278,6 @@ br.lists.spells = {
             },
             glyphs                          = {
 
-            },
-            items                           = {
-                consortsColdCore            = 144293,
-                koltirasNewfoundWill        = 132366,
-                perseveranceOfTheEbonMartyr = 132459,
             },
             talents                         = {
                 asphyxiate                  = 108194,
@@ -440,9 +419,6 @@ br.lists.spells = {
             },
             glyphs                          = {
 
-            },
-            items                           = {
-                coldHeart                   = 151796,
             },
             talents                         = {
                 wraithWalk                  = 212552,
@@ -603,10 +579,6 @@ br.lists.spells = {
                 glyphOfManaTouchedSouls     = 219744,
                 glyphOfShadowEnemies        = 220244,
                 glyphOfTatteredWings        = 220226,
-            },
-            items                           = {
-                inquisitorsMenacingEye      = 129192,
-                soulOfTheSlayer             = 151639,
             },
             talents                         = {
                 felblade                    = 232893,
@@ -947,14 +919,6 @@ br.lists.spells = {
                 glyphOfTheOrca              = 114333,
                 glyphOfTheSentinel          = 219062,
                 glyphOfTheUrsolChameleon    = 107059,
-            },
-            items                           = {
-                ailuroPouncers              = 137024,
-                burningSeeds                = 94604,
-                chatoyantSignet             = 137040,
-                fandralsSeedPouch           = 122304,
-                luffaWrappings              = 137056,
-                theWildshapersClutch        = 137094,
             },
             talents                         = {
                 massEntanglement            = 102359,
@@ -1747,11 +1711,6 @@ br.lists.spells = {
             glyphs                          = {
 
             },
-            items                           = {
-                drinkingHornCover           = 137097,
-                hiddenMastersForbiddenTouch = 137057,
-                theEmperorsCapacitor        = 144239,
-            },
             talents                         = {
                 celerity                    = 115173,
                 chiBurst                    = 123986,
@@ -1869,6 +1828,7 @@ br.lists.spells = {
             },
             debuffs                         = {
                 blessedHammer               = 204301,
+                judgmentOfLight             = 196941,
             },
             glyphs                          = {
 
@@ -3248,6 +3208,7 @@ br.lists.spells = {
                 bladestorm                  = 46924,
                 bloodthirst                 = 23881,
                 dragonRoar                  = 118000,
+                deathWish                   = 199261,
                 enragedRegeneration         = 184364,
                 execute                     = 5308,
                 furiousSlash                = 100130,
@@ -3262,6 +3223,7 @@ br.lists.spells = {
 
             },
             buffs                           = {
+                deathWish                   = 199261,
                 enrage                      = 184362,
                 furiousSlash                = 202539,
                 meatCleaver                 = 85739,
@@ -3392,11 +3354,6 @@ br.lists.spells = {
             glyphs                          = {
 
             },
-            items                           = {
-                archavonsHeavyHand          = 137060,
-                kazzalaxFujiedasFury        = 137053,
-                weightOfTheEarth            = 137077,
-            },
             talents                         = {
                 angerManagement             = 152278,
                 boundingStride              = 202163,
@@ -3455,6 +3412,7 @@ br.lists.spells = {
                 flaskOfTheUndertow              = 251839,
                 fruitfulMachinatins             = 242623, -- Absorb Shield from Deceiver's Grand Design
                 greaterFlaskOfTheCurrents       = 298836,
+                greaterFlaskOfTheUndertow       = 298841,
                 guidingHand                     = 242622, -- from The Deceiver's Grand Design
                 heroism                         = 32182,
                 netherwinds                     = 160452,
@@ -3463,6 +3421,7 @@ br.lists.spells = {
                 potionOfFocusedResolve          = 298317,
                 prolongedPower                  = 229206,
                 racial                          = getRacial(),
+                razorCoral                      = 303570, -- Crit Buff from Ashvane's Razor Coral
                 sephuz1                         = 208051, -- the fulltime 10% movement, 2% haste buff
                 sephuz2                         = 208052, -- the proc, 70% movement, 25% haste buff
                 sephuzCooldown                  = 226262, -- CD (30 seconds) for the proc
@@ -3481,6 +3440,8 @@ br.lists.spells = {
                 concentratedFlame               = 295368,
                 dampening                       = 110310,
                 eyeOfLeotheras                  = 206649,
+                razorCoral                      = 303568, --304877,
+                repeatPerformance               = 304409,
                 temptation                      = 234143,
             },
             essences                            = {
@@ -3489,6 +3450,7 @@ br.lists.spells = {
                 azerothsUndyingGift             = 298081,
                 bloodOfTheEnemy                 = 297108,
                 concentratedFlame               = 295373,
+                condensedLifeForce              = 299357,
                 empoweredNullBarrier            = 295746,
                 focusedAzeriteBeam              = 295258,
                 guardianOfAzeroth               = 299355,
@@ -3504,51 +3466,6 @@ br.lists.spells = {
                 theUnboundForce                 = 299376,
                 vitalityConduit                 = 299958,
                 worldveinResonance              = 295186
-            },
-            items                               = {
-                battleScarredAugmentRune        = 160053,
-                battlePotionOfAgility           = 163223,
-                battlePotionOfIntellect         = 163222,
-                battlePotionOfStrength          = 163224,
-                bygoneBeeAlmanac                = 163936,
-                convergenceOfFates              = 140806,
-                deceiversGrandDesign            = 147007,
-                defiledAugmentRune              = 140587,
-                draughtOfSouls                  = 140808,
-                eternalAmuletOfTheRedeemed      = 122663,
-                eternalEmberfuryTalisman        = 122667,
-                eternalHorizonChoker            = 122664,
-                eternalTalismanOfEvasion        = 122662,
-                eternalWillOfTheMartyr          = 122668,
-                eternalWovenIvyNecklace         = 122666,
-                feloiledInfernalMachine         = 144482,
-                flaskOfTenThousandScars         = 127850,
-                flaskOfTheCountlessArmies       = 127849,
-                flaskOfTheSeventhDemon          = 127848,
-                flaskOfTheWhisperedPact         = 127847,
-                flaskOfTheCurrents              = 152638,
-                flaskOfEndlessFathoms           = 152639,
-                flaskOfTheVastHorizon           = 152640,
-                flaskOfTheUndertow              = 152641,
-                galecallersBeak                 = 161379,
-                greaterFlaskOfTheCurrents       = 168651,
-                healthstone                     = 5512,
-                heirloomNeck                    = getHeirloomNeck(),
-                hornOfValor                     = 133642,
-                lightforgedAugmentRune          = 153023, -- 7.3 augment rune item
-                jesHowler                       = 159627,
-                manariTrainingAmulet            = 153130,
-                oraliusWhisperingCrystal        = 118922,
-                potionOfBurstingBlood           = 152560,                
-                potionOfFocusedResolve          = 168506,
-                potionOfProlongedPower          = 142117,
-                potionOfTheOldWar               = 127844,
-                repurposedFelFocuser            = 147707,
-                ringOfCollapsingFutures         = 142173,
-                specterOfBetrayal               = 151190,
-                umbralMoonglaives               = 147012,
-                vigorTrinket                    = 165572,
-                vialOfCeaselessToxins           = 147011,
             },
         },
     },
