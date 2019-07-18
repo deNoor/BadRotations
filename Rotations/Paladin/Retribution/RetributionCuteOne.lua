@@ -67,7 +67,7 @@ local function createOptions()
             -- Divine Storm Units
             br.ui:createSpinnerWithout(section, "Divine Storm Units",  2,  2,  3,  1,  "|cffFFBB00Units to use Divine Storm.")
             -- Heart Essence
-            br.ui:createCheckbox(section, "Heart Essence")
+            br.ui:createCheckbox(section, "Use Essence")
         br.ui:checkSectionState(section)
         ------------------------
         --- COOLDOWN OPTIONS ---
@@ -205,6 +205,7 @@ local function runRotation()
         local item          = br.player.items
         local level         = br.player.level
         local mode          = br.player.mode
+        local moving        = GetUnitSpeed("player") > 0
         local php           = br.player.health
         local race          = br.player.race
         local resable       = UnitIsPlayer("target") and UnitIsDeadOrGhost("target") and UnitIsFriend("target","player")
@@ -220,8 +221,10 @@ local function runRotation()
         units.get(8)
         enemies.get(5)
         enemies.get(8)
+        enemies.get(8,"player",false,true)
         enemies.get(10)
         enemies.get(12)
+        enemies.get(30,"player",false,true)
 
         if leftCombat == nil then leftCombat = GetTime() end
         if profileStop == nil then profileStop = false end
@@ -262,8 +265,8 @@ local function runRotation()
             or (not talent.crusade and (not isChecked("Avenging Wrath")
                 or (not equiped.azsharasFontOfPower() and cd.avengingWrath.remain() > gcd * 3) or cd.avengingWrath.remain() > gcd * 6)))
         -- variable,name=ds_castable,value=spell_targets.divine_storm>=2&!talent.righteous_verdict.enabled|spell_targets.divine_storm>=3&talent.righteous_verdict.enabled|buff.empyrean_power.up&debuff.judgment.down&buff.divine_purpose.down&buff.avenging_wrath_autocrit.down
-        local dsCastable = ((mode.rotation == 1 and (#enemies.yards8 >= getOptionValue("Divine Storm Units"))) or (mode.rotation == 2 and #enemies.yards8 > 0)
-            or (buff.empyreanPower.exists() and not debuff.judgment.exists(units.dyn8) and not buff.divinePurpose.exists() and not buff.avengingWrath.exists()))
+        local dsCastable = ((mode.rotation == 1 and (#enemies.yards8 >= getOptionValue("Divine Storm Units"))) or (mode.rotation == 2 and #enemies.yards8 > 0))
+            or (buff.empyreanPower.exists() and not debuff.judgment.exists(units.dyn8) and not buff.divinePurpose.exists() and not buff.avengingWrath.exists())
         -- variable,name=HoW,value=(!talent.hammer_of_wrath.enabled|target.health.pct>=20&(buff.avenging_wrath.down|buff.crusade.down))
         local howVar = (not talent.hammerOfWrath or thp(units.dyn5) >= 20) and (not buff.avengingWrath.exists() or not buff.crusade.exists())
 
@@ -627,10 +630,12 @@ local function runRotation()
                     end
                 -- Essence: Focused Azerite Beam
                     -- focused_azerite_beam,if=(!raid_event.adds.exists|raid_event.adds.in>30|spell_targets.divine_storm>=2)&(buff.avenging_wrath.down|buff.crusade.down)&(cooldown.blade_of_justice.remains>gcd*3&cooldown.judgment.remains>gcd*3)
-                    if cast.able.focusedAzeriteBeam() and (not buff.avengingWrath.exists() or not buff.crusade.exists())
+                    if cast.able.focusedAzeriteBeam() and (not buff.avengingWrath.exists() and not buff.crusade.exists())
                         and (cd.bladeOfJustice.remain() > gcd * 3 and cd.judgment.remain() > gcd * 3)
+                        and (#enemies.yards8f >= 3 or useCDs()) and not moving
                     then
-                        if cast.focusedAzeriteBeam() then return end
+                        local minCount = useCDs() and 1 or 3
+                        if cast.focusedAzeriteBeam(nil,"cone",minCount, 8) then return true end
                     end
                 -- Essence: Memory of Lucid Dreams
                     -- memory_of_lucid_dreams,if=(buff.avenging_wrath.up|buff.crusade.up&buff.crusade.stack=10)&holy_power<=3
@@ -731,10 +736,12 @@ local function runRotation()
             end
         -- Divine Storm
             -- divine_storm,if=variable.ds_castable&variable.wings_pool&((!talent.execution_sentence.enabled|(spell_targets.divine_storm>=2|cooldown.execution_sentence.remains>gcd*2))|(cooldown.avenging_wrath.remains>gcd*3&cooldown.avenging_wrath.remains<10|cooldown.crusade.remains>gcd*3&cooldown.crusade.remains<10|buff.crusade.up&buff.crusade.stack<10))
-            if cast.able.divineStorm() and dsCastable and wingsPool and ((not talent.executionSentence or (#enemies.yards8 >= 2 or cd.executionSentence.remain() > gcd * 2))
-                or (not talent.crusade and cd.avengingWrath.remain() > gcd * 3 and cd.avengingWrath.remain() < 10) 
-                or (talent.crusade and cd.crusade.remain() > gcd * 3 and cd.crusade.remain() < 10)
-                or (talent.crusade and buff.crusade.exists() and buff.crusade.stack() < 10))
+            if cast.able.divineStorm() and dsCastable and wingsPool 
+                and ((not talent.executionSentence or (#enemies.yards8 >= 2 or cd.executionSentence.remain() > gcd * 2))
+                    or (not talent.crusade and ((cd.avengingWrath.remain() > gcd * 3 and cd.avengingWrath.remain() < 10) or not isChecked("Avenging Wrath")))
+                    or (talent.crusade and ((cd.crusade.remain() > gcd * 3 and cd.crusade.remain() < 10) or not isChecked("Crusade")))
+                    or (talent.crusade and buff.crusade.exists() and buff.crusade.stack() < 10)
+                    or not useCDs())
             then
                 if cast.divineStorm("player","aoe",getOptionValue("Divine Storm Units"),8) then return end
             end
@@ -782,7 +789,15 @@ local function runRotation()
         -- Hammer of Wrath
             -- hammer_of_wrath,if=holy_power<=4
             if cast.able.hammerOfWrath() and holyPower <= 4 then
-                if cast.hammerOfWrath() then return end
+                if buff.avengingWrath.exists() then
+                    if cast.hammerOfWrath() then return end
+                end
+                for i = 1, #enemies.yards30f do
+                    local thisUnit = enemies.yards30f[i]
+                    if getHP(thisUnit) < 20 then
+                        if cast.hammerOfWrath(thisUnit) then return end
+                    end
+                end
             end
         -- Consecration
             -- consecration,if=holy_power<=2|holy_power<=3&cooldown.blade_of_justice.remains>gcd*2|holy_power=4&cooldown.blade_of_justice.remains>gcd*2&cooldown.judgment.remains>gcd*2
@@ -808,7 +823,7 @@ local function runRotation()
             -- call_action_list,name=finishers
             if actionList_Finisher() then return end
         -- Essence: Concentrated Flame
-            if isChecked("Concentrated Flame") and cast.able.concentratedFlame() then
+            if isChecked("Use Essence") and cast.able.concentratedFlame() then
                 if cast.concentratedFlame() then return end
             end
         -- Crusader Strike
@@ -828,7 +843,7 @@ local function runRotation()
     -- Profile Stop | Pause
         if not inCombat and not hastar and profileStop==true then
             profileStop = false
-        elseif (inCombat and profileStop==true) or pause() or mode.rotation==4 then
+        elseif (inCombat and profileStop==true) or pause() or mode.rotation==4 or cast.current.focusedAzeriteBeam() then
             return true
         else
 -----------------------

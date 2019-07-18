@@ -3,6 +3,10 @@ if br.lists == nil then
 end
 -- No Touch Units = List of units that we should not attack for any reason
 br.lists.noTouchUnits = {
+    -- Jade Temple
+    {unitID = 56448, buff = 106062}, -- Wise Mari with Bubble
+    --Shadopan Monastery
+    {unitID = 56747, buff = 110945}, -- Gu Cloudstrike with Charging Soul
     -- Iron Docks
     {unitID = 87451, buff = 164504, spell = 164426}, --Fleshrender Nok'gar, do not attack during defensive stance buff, Todo: Should stop when he cast 164504
     {unitID = 1, buff = 163689}, -- Never attack Sanguine Sphere
@@ -28,14 +32,12 @@ br.lists.noTouchUnits = {
     {unitID = 144680, buff = 284436}, -- Champion of the Light (H), Frida Ironbellows, Seal of Reckoning
     {unitID = 144942, buff = 289644}, -- Spark Bot,High Tinker Mekkatorque, Mythic 
     {unitID = 145644, buff = 284377}, -- Bwonsamdi with Unliving buff
-    -- Waycrest Manor
-    -- {unitID = 135358, buff = -260805}, -- Sister Malady (No Focusing Iris)
-    -- {unitID = 135359, buff = -260805}, -- Sister Solena (No Focusing Iris)
-    -- {unitID = 135360, buff = -260805}, -- Sister Briar (No Focusing Iris)
-    -- {unitID = 131823, buff = -260805}, -- Sister Malady (No Focusing Iris)
-    -- {unitID = 131824, buff = -260805}, -- Sister Solena (No Focusing Iris)
-    -- {unitID = 131825, buff = -260805}, -- Sister Briar (No Focusing Iris)
-    
+    -- The Motherlode!
+    {unitID = 131227, buff = 260189}, -- Mogul Razdunk with Configuration: Drill buff
     -- Underrot
     {unitID = 137458}, -- Rotting Spore
+    -- Siege of Boralus
+    {unitID = 128652}, -- Viq'Goth
+    -- Mechagon
+    {unitID = 152703}, -- Walkie Shockie X1
 }
