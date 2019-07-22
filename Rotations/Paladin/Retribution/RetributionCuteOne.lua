@@ -196,6 +196,7 @@ local function runRotation()
         local combatTime    = getCombatTime()
         local debuff        = br.player.debuff
         local enemies       = br.player.enemies
+        local essence       = br.player.essence
         local equiped       = br.player.equiped
         local gcd           = br.player.gcdMax
         local hastar        = GetObjectExists("target")
@@ -596,7 +597,7 @@ local function runRotation()
                 if isChecked("Trinkets") and equiped.ashvanesRazorCoral() and (not debuff.razorCoral.exists(units.dyn5)
                     or ((not talent.crusade and (not useCDs() or not isChecked("Avenging Wrath") or buff.avengingWrath.remain() >= 20))
                         or (talent.crusade and (not useCDs() or not isChecked("Crusade") or (buff.crusade.stack() == 10 and buff.crusade.remain() > 15))))
-                    and (cd.guardianOfAzeroth.remain() > 90 or ttd(unit.dyn5) < 30 or not essence.condensedLifeForce.active))
+                    and (cd.guardianOfAzeroth.remain() > 90 or ttd(units.dyn5) < 30 or not essence.condensedLifeForce.active))
                 then
                     for i = 13, 14 do
                         if use.able.slot(i) then
