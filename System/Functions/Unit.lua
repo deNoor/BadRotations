@@ -236,7 +236,7 @@ function getHP(Unit)
 			end
 		end
 	end
-	return 0
+	return -1
 end
 -- if getHPLossPercent("player",5) then
 function getHPLossPercent(unit,sec)

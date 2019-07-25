@@ -164,7 +164,7 @@ function getEnemies(thisUnit,radius,checkNoCombat,facing)
 	for k, v in pairs(enemyTable) do
 		thisEnemy = v.unit
 		distance =  getDistance(thisUnit,thisEnemy)
-		if distance < radius and (not facing or getFacing("player",thisEnemy)) then
+		if distance < radius and isValidUnit(thisEnemy) and (not facing or getFacing("player",thisEnemy)) then
 			tinsert(enemiesTable,thisEnemy)
 		end
     end
