@@ -168,6 +168,12 @@ local function createOptions()
     return optionTable
 end
 
+----------------------------
+------- File level Locals -------
+----------------------------
+local lastAutoAttackSent = GetTime()
+local autoAttackSpamInterval = 0.1 -- in seconds
+
 ----------------
 --- ROTATION ---
 ----------------
@@ -188,35 +194,37 @@ local function runRotation()
 --------------
 --- Locals ---
 --------------
-        local artifact      = br.player.artifact
-        local buff          = br.player.buff
-        local cast          = br.player.cast
-        local cd            = br.player.cd
-        local charges       = br.player.charges
-        local combatTime    = getCombatTime()
-        local debuff        = br.player.debuff
-        local enemies       = br.player.enemies
-        local essence       = br.player.essence
-        local equiped       = br.player.equiped
-        local gcd           = br.player.gcdMax
-        local hastar        = GetObjectExists("target")
-        local healPot       = getHealthPot()
-        local holyPower     = br.player.power.holyPower.amount()
-        local inCombat      = br.player.inCombat
-        local item          = br.player.items
-        local level         = br.player.level
-        local mode          = br.player.mode
-        local moving        = GetUnitSpeed("player") > 0
-        local php           = br.player.health
-        local race          = br.player.race
-        local resable       = UnitIsPlayer("target") and UnitIsDeadOrGhost("target") and UnitIsFriend("target","player")
-        local solo          = GetNumGroupMembers() == 0
-        local spell         = br.player.spell
-        local talent        = br.player.talent
-        local thp           = getHP
-        local ttd           = getTTD
-        local units         = br.player.units
-        local use           = br.player.use
+        local artifact          = br.player.artifact
+        local buff              = br.player.buff
+        local cast              = br.player.cast
+        local cd                = br.player.cd
+        local charges           = br.player.charges
+        local combatTime        = getCombatTime()
+        local debuff            = br.player.debuff
+        local enemies           = br.player.enemies
+        local essence           = br.player.essence
+        local equiped           = br.player.equiped
+        local gcd               = br.player.gcdMax
+        local hastar            = GetObjectExists("target")
+        local healPot           = getHealthPot()
+        local holyPower         = br.player.power.holyPower.amount()
+        local inCombat          = br.player.inCombat
+        local item              = br.player.items
+        local level             = br.player.level
+        local mode              = br.player.mode
+        local moving            = GetUnitSpeed("player") > 0
+        local php               = br.player.health
+        local race              = br.player.race
+        local resable           = UnitIsPlayer("target") and UnitIsDeadOrGhost("target") and UnitIsFriend("target","player")
+        local solo              = GetNumGroupMembers() == 0
+        local spell             = br.player.spell
+        local talent            = br.player.talent
+        local thp               = getHP
+        local ttd               = getTTD
+        local units             = br.player.units
+        local use               = br.player.use
+        local timeNow           = GetTime()
+        local IsSpamAttackAllowed = not IsCurrentSpell(6603) and timeNow - lastAutoAttackSent > autoAttackSpamInterval
 
         units.get(5)
         units.get(8)
@@ -227,7 +235,7 @@ local function runRotation()
         enemies.get(12)
         enemies.get(30,"player",false,true)
 
-        if leftCombat == nil then leftCombat = GetTime() end
+        if leftCombat == nil then leftCombat = timeNow end
         if profileStop == nil then profileStop = false end
         if opener == nil then opener = false end
         if not inCombat and not hastar and profileStop==true then
@@ -730,7 +738,7 @@ local function runRotation()
                         if cast.crusaderStrike("target") then return end
                     end
         -- Start Attack
-                    if getDistance("target") < 5 then StartAttack() end
+                    if getDistance("target") < 5 and IsSpamAttackAllowed then StartAttack() end
                 end
             end
         end -- End Action List - PreCombat
@@ -738,7 +746,7 @@ local function runRotation()
         local function actionList_Finisher()
         -- Inquisition
             -- inquisition,if=buff.avenging_wrath.down&(buff.inquisition.down|buff.inquisition.remains<8&holy_power>=3|talent.execution_sentence.enabled&cooldown.execution_sentence.remains<10&buff.inquisition.remains<15|cooldown.avenging_wrath.remains<15&buff.inquisition.remains<20&holy_power>=3)
-            if cast.able.inquisition() and not buff.avengingWrath.exists() and (not buff.inquisition.exists() or (buff.inquisition.remain() < 5 and holyPower >= 3)
+            if cast.able.inquisition() and not buff.avengingWrath.exists() and ((buff.inquisition.remain() < 5 and holyPower >= 3)
                 or (talent.executionSentence and cd.executionSentence.remain() < 10 and buff.inquisition.remain() < 15)
                 or (cd.avengingWrath.remain() < 15 and buff.inquisition.remain() < 20 and holyPower >= 3))
             then
@@ -821,7 +829,7 @@ local function runRotation()
             end
         -- Consecration
             -- consecration,if=holy_power<=2|holy_power<=3&cooldown.blade_of_justice.remains>gcd*2|holy_power=4&cooldown.blade_of_justice.remains>gcd*2&cooldown.judgment.remains>gcd*2
-            if cast.able.consecration() and (holyPower <= 2 or (holyPower <=3 and cd.bladeOfJustice.remain() > gcd * 2)
+            if cast.able.consecration() and not isMoving("player") and (holyPower <= 2 or (holyPower <=3 and cd.bladeOfJustice.remain() > gcd * 2)
                 or (holyPower == 4 and cd.bladeOfJustice.remain() > gcd * 2 and cd.judgment.remain() > gcd * 2))
             then
                 if cast.consecration("player","aoe",1,8) then return end
@@ -896,10 +904,8 @@ local function runRotation()
                     local startTime = debugprofilestop()
             -- Start Attack
                     -- auto_attack
-                    if getDistance(units.dyn5) < 5 then --and opener == true then
-                        if not IsCurrentSpell(6603) then
-                            StartAttack(units.dyn5)
-                        end
+                    if getDistance(units.dyn5) < 5 and IsSpamAttackAllowed then --and opener == true then
+                        StartAttack(units.dyn5)
                     end
             -- Action List - Interrupts
                     -- rebuke
