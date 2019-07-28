@@ -80,7 +80,7 @@ local function createOptions()
             -- Break Crowd Control
             br.ui:createCheckbox(section,"Break Crowd Control","|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFAuto Shapeshifting to break crowd control.|cffFFBB00.")
             -- Wild Charge
-            br.ui:createCheckbox(section,"Displacer Beast / Wild Charge","|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFAuto Charge usage.|cffFFBB00.")
+            br.ui:createCheckbox(section,"Wild Charge","|cff15FF00Enables|cffFFFFFF/|cffD60000Disables |cffFFFFFFAuto Charge usage.|cffFFBB00.")
             -- Brutal Slash Targets
             br.ui:createSpinnerWithout(section,"Brutal Slash Targets", 3, 1, 10, 1, "|cffFFFFFFSet to desired targets to use Brutal Slash on. Min: 1 / Max: 10 / Interval: 1")
             -- Multi-DoT Limit
@@ -93,7 +93,7 @@ local function createOptions()
             -- Augment Rune
             br.ui:createCheckbox(section,"Augment Rune")
             -- Potion
-            br.ui:createDropdownWithout(section,"Potion", {"Superior Battle Potion of Agility","Battle Potion of Agility","Potion of Prolonged Power","None"}, 1, "|cffFFFFFFSet Potion to use.")
+            br.ui:createDropdownWithout(section,"Potion", {"Superior Battle Potion of Agility","Potion of Unbridled Fury","Battle Potion of Agility","Potion of Prolonged Power","None"}, 1, "|cffFFFFFFSet Potion to use.")
             -- Elixir
             br.ui:createDropdownWithout(section,"Elixir", {"Greater Flask of the Currents","Repurposed Fel Focuser","Oralius' Whispering Crystal","None"}, 1, "|cffFFFFFFSet Elixir to use.")
             -- Racial
@@ -295,13 +295,16 @@ local function ferociousBiteFinish(thisUnit)
     local damage = 0
     local finishHim = false
     if getOptionValue("Ferocious Bite Execute") ~= 3 and comboPoints > 0 and not isDummy(thisUnit) then
-        local comboStart = desc:find(" "..comboPoints.." ",1,true)+2
-        local damageList = desc:sub(comboStart,desc:len())
-        comboStart = damageList:find(": ",1,true)+2
-        damageList = damageList:sub(comboStart,desc:len())
-        local comboEnd = damageList:find(" ",1,true)-1
-        damageList = damageList:sub(1,comboEnd)
-        damage = damageList:gsub(",","")
+        local comboStart = desc:find(" "..comboPoints.." ",1,true)
+        if comboStart ~= nil then
+            comboStart = comboStart + 2
+            local damageList = desc:sub(comboStart,desc:len())
+            comboStart = damageList:find(": ",1,true)+2
+            damageList = damageList:sub(comboStart,desc:len())
+            local comboEnd = damageList:find(" ",1,true)-1
+            damageList = damageList:sub(1,comboEnd)
+            damage = damageList:gsub(",","")
+        end
         finishHim = tonumber(damage) >= UnitHealth(thisUnit)
     end
     return finishHim
@@ -671,7 +674,8 @@ actionList.Cooldowns = function()
         -- Tiger's Fury
         -- tigers_fury,if=energy.deficit>=60
         if isChecked("Tiger's Fury") and cast.able.tigersFury() then
-            if cast.able.tigersFury() and (energyDeficit >= 60 or snipeTF()) then
+            if cast.able.tigersFury() and ((energyDeficit >= 80 or snipeTF()) and range.dyn5
+                or (buff.bloodtalons.exists() and energyDeficit >= 60 and range.dyn5)) then
                 if cast.tigersFury() then debug("Casting Tiger's Fury") return true end
             end
         end
@@ -728,7 +732,7 @@ actionList.Cooldowns = function()
             if buff.tigersFury.exists() then
                 -- Essence: Concentrated Flame
                 if cast.able.concentratedFlame() then
-                    if cast.concentratedFlame() then debug("Casting Concentrated Flame on "..UnitName(units.dyn5)) return true end
+                    if cast.concentratedFlame() then debug("Casting Concentrated Flame") return true end
                 end
                 -- Essence: Guardian of Azeroth
                 if useCDs() and cast.able.guardianOfAzeroth() then
@@ -751,17 +755,22 @@ actionList.Cooldowns = function()
         end
         -- Potion
         -- potion,if=target.time_to_die<65|(time_to_die<180&(buff.berserk.up|buff.incarnation.up))
-        if getOptionValue("Potion") ~= 4 and (inRaid or inInstance) and isBoss("target") then
-            if (ttd(units.dyn5) > 45 and (buff.berserk.exists() or buff.incarnationKingOfTheJungle.exists())) then
+        if getOptionValue("Potion") ~= 5 and isBoss("target")
+        then
+            if ((inRaid or (inInstance and ttd(units.dyn5) > 45)) and (buff.berserk.exists() and buff.berserk.remain() > 18
+                or buff.incarnationKingOfTheJungle.exists() and buff.incarnationKingOfTheJungle.remain() > 28)) then
                 if getOptionValue("Potion") == 1 and use.able.superiorBattlePotionOfAgility() then
                     use.superiorBattlePotionOfAgility()
-                    debug("Using Superior Battle Potion of Agility [Pre-pull]");
-                elseif getOptionValue("Potion") == 2 and use.able.battlePotionOfAgility() then
+                    debug("Using Superior Battle Potion of Agility");
+                elseif getOptionValue("Potion") == 2 and use.able.potionOfUnbridledFury() then
+                    use.potionOfUnbridledFury()
+                    debug("Using Potion of Unbridled Fury");
+                elseif getOptionValue("Potion") == 3 and use.able.battlePotionOfAgility() then
                     use.battlePotionOfAgility()
-                    debug("Using Battle Potion of Agility [Pre-pull]");
-                elseif getOptionValue("Potion") == 3 and use.able.potionOfProlongedPower() then
+                    debug("Using Battle Potion of Agility");
+                elseif getOptionValue("Potion") == 4 and use.able.potionOfProlongedPower() then
                     use.potionOfProlongedPower()
-                    debug("Using Potion of Prolonged Power [Pre-pull]");
+                    debug("Using Potion of Prolonged Power");
                 end
             end
         end
@@ -931,7 +940,7 @@ actionList.Finisher = function()
                 then
                     if cast.pool.rip() then ChatOverlay("Pooling For Rip") return true end
                     if cast.able.rip(thisUnit) then
-                        if cast.rip(thisUnit) then debug("Casting Rip on "..UnitName(units.dyn5)) return true end
+                        if cast.rip(thisUnit) then debug("Casting Rip") return true end
                     end
                 end
             end
@@ -952,7 +961,7 @@ actionList.Finisher = function()
     if (cast.pool.maim() or cast.able.maim()) and (buff.ironJaws.exists()) and range.dyn5 then
         if cast.pool.maim() then ChatOverlay("Pooling For Maim") return true end
         if cast.able.maim() then
-            if cast.maim() then debug("Casting Maim on "..UnitName(units.dyn5)) return true end
+            if cast.maim() then debug("Casting Maim") return true end
         end
     end
     -- Ferocious Bite
@@ -964,9 +973,9 @@ actionList.Finisher = function()
             or UnitIsCharmed(units.dyn5) or not canDoT(units.dyn5) or isDummy(units.dyn5))
     then
         if getOptionValue("Ferocious Bite Execute") == 1 and ferociousBiteFinish(units.dyn5) then
-            Print("Ferocious Bite Finished! "..UnitName(units.dyn5).." with "..round2(thp(units.dyn5),0).."% health remaining.")
+            --Print("Ferocious Bite Finished! "..UnitName(units.dyn5).." with "..round2(thp(units.dyn5),0).."% health remaining.")
         end
-        if cast.ferociousBite() then debug("Casting Ferocious Bite on "..UnitName(units.dyn5)) return true end
+        if cast.ferociousBite() then debug("Casting Ferocious Bite") return true end
     end
 end -- End Action List - Finisher
 
@@ -1031,7 +1040,7 @@ actionList.Generator = function()
     -- pool_resource,for_next=1
     -- swipe_cat,if=buff.scent_of_blood.up
     if (cast.pool.swipeCat() or cast.able.swipeCat()) and not talent.brutalSlash 
-        and not isExplosive("target") and buff.scentOfBlood.exists() and range.dyn8AOE < 8
+        and not isExplosive("target") and buff.scentOfBlood.exists() and range.dyn8AOE
     then
         if cast.pool.swipeCat() then ChatOverlay("Pooling For Swipe - Scent of Blood") return true end
         if cast.able.swipeCat() then
@@ -1151,7 +1160,7 @@ actionList.Generator = function()
             or ttd(units.dyn5) <= 4 or not canDoT(units.dyn5) or buff.clearcasting.exists() 
             or level < 12 or isExplosive("target"))
     then
-        if cast.shred() then debug("Casting Shred on "..UnitName(units.dyn5).."") return true end
+        if cast.shred() then debug("Casting Shred") return true end
     end
 end -- End Action List - Generator
 
@@ -1225,21 +1234,24 @@ actionList.PreCombat = function()
             if buff.prowl.exists() then
                 -- Pre-pot
                 -- potion,name=old_war
-                if getOptionValue("Potion") ~= 4 and pullTimer <= 1 and (inRaid or inInstance) then
+                if getOptionValue("Potion") ~= 5 and pullTimer <= 1 and (inRaid or inInstance) then
                     if getOptionValue("Potion") == 1 and use.able.superiorBattlePotionOfAgility() then
                         use.superiorBattlePotionOfAgility()
                         debug("Using Superior Battle Potion of Agility [Pre-pull]");
-                    elseif getOptionValue("Potion") == 2 and use.able.battlePotionOfAgility() then
+                    elseif getOptionValue("Potion") == 2 and use.able.potionOfUnbridledFury() then
+                        use.potionOfUnbridledFury()
+                        debug("Using Potion of Unbridled Fury [Pre-pull]");
+                    elseif getOptionValue("Potion") == 3 and use.able.battlePotionOfAgility() then
                         use.battlePotionOfAgility()
                         debug("Using Battle Potion of Agility [Pre-pull]");
-                    elseif getOptionValue("Potion") == 3 and use.able.potionOfProlongedPower() then
+                    elseif getOptionValue("Potion") == 4 and use.able.potionOfProlongedPower() then
                         use.potionOfProlongedPower()
                         debug("Using Potion of Prolonged Power [Pre-pull]");
                     end
                 end
             end -- End Prowl
             -- Berserk/Tiger's Fury Pre-Pull
-            if isChecked("Berserk/Tiger's Fury Pre-Pull") and pullTimer <= 1 and (inRaid or #br.friend > 1) then
+            if isChecked("Berserk/Tiger's Fury Pre-Pull") and pullTimer <= 1 and (inRaid or inInstance) then
                 if cast.able.berserk() and cast.able.tigersFury() then
                     cast.berserk()
                     cast.tigersFury()
@@ -1425,8 +1437,7 @@ local function runRotation()
             and not isChecked("Death Cat Mode") and UnitExists("target") and opener.complete and cd.global.remain() == 0
         then
             -- Wild Charge
-            -- wild_charge
-            if isChecked("Displacer Beast / Wild Charge")
+            if isChecked("Wild Charge")
                 and cast.able.wildCharge("player") and isValidUnit("target")
             then
                 if cast.wildCharge("target") then debug("Casting Wild Charge on "..UnitName("target").." [Out of Melee]"); return true end
@@ -1438,9 +1449,9 @@ local function runRotation()
                 if cast.able.rake() and level >= 12 and (not debuff.rake.exists(units.dyn5) 
                     or debuff.rake.calc() > debuff.rake.applied(units.dyn5) * 0.85) 
                 then
-                    if cast.rake(units.dyn5) then debug("Casting Rake on "..UnitName(units.dyn5).." [Stealth Break]"); return true end
+                    if cast.rake(units.dyn5) then --[[debug("Casting Rake on "..UnitName(units.dyn5).." [Stealth Break]");]] return true end
                 elseif cast.able.shred() and debuff.rake.exists(units.dyn5) and debuff.rake.calc() <= debuff.rake.applied(units.dyn5) * 0.85 then
-                    if cast.shred(units.dyn5) then debug("Casting Shred on "..UnitName(units.dyn5).." [Stealth Break]"); return true end
+                    if cast.shred(units.dyn5) then --[[debug("Casting Shred on "..UnitName(units.dyn5).." [Stealth Break]");]] return true end
                 end
             elseif not (buff.prowl.exists() or buff.shadowmeld.exists()) then
                 -- auto_attack
@@ -1474,7 +1485,8 @@ local function runRotation()
                     end
                     -- Regrowth
                     -- regrowth,if=combo_points=5&buff.predatory_swiftness.up&talent.bloodtalons.enabled&buff.bloodtalons.down
-                    if cast.able.regrowth() and (comboPoints == 5 and buff.predatorySwiftness.exists()
+                    if (cast.able.regrowth() and (((comboPoints == 5 and buff.predatorySwiftness.exists())
+                        or (comboPoints == 4 and debuff.rake.remain(units.dyn5) < 5.1 and buff.predatorySwiftness.exists())))
                         and talent.bloodtalons and not buff.bloodtalons.exists())
                     then
                         local opValue = getOptionValue("Auto Heal")

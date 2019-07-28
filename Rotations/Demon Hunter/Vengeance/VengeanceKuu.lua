@@ -114,10 +114,16 @@ local function createOptions()
         section = br.ui:createSection(br.ui.window.profile,"Essences")
         -- Lucid Dreams
             br.ui:createCheckbox(section,"Lucid Dreams")
+        -- Worldvein Resonance
+            br.ui:createCheckbox(section, "Worldvein Resonance")
+        -- Aegis of the Deep
+            br.ui:createCheckbox(section, "Aegis of the Deep")
         -- Concentrated Flame Heal
             br.ui:createSpinner(section,"Concentrated Flame Heal", 50, 0, 100, 5, "|cffFFBB00Health Percentage to use at.")
         -- Anima of Death
             br.ui:createSpinner(section,"Anima of Death", 75, 0, 100, 5, "|cffFFBB00Health Percentage to use at.")
+        -- Empower Null Barrier
+            br.ui:createSpinner(section,"Empowered Null Barrier", 50, 0, 100, 5, "|cffFFBB00Health Percentage to use at.")
         br.ui:checkSectionState(section)
     -- Interrupt Options
         section = br.ui:createSection(br.ui.window.profile, "Interrupts")
@@ -127,6 +133,8 @@ local function createOptions()
             br.ui:createCheckbox(section, "Sigil of Silence")
         -- Sigil of Misery
             br.ui:createCheckbox(section, "Sigil of Misery")
+        -- Imprison
+            br.ui:createCheckbox(section, "Imprison")
         -- Interrupt Percentage
             br.ui:createSpinner(section, "Interrupt At",  0,  0,  95,  5,  "|cffFFFFFFCast Percent to Cast At")
         br.ui:checkSectionState(section)
@@ -211,6 +219,13 @@ local function runRotation()
         enemies.get(40)
 
         if profileStop == nil then profileStop = false end
+
+        if br.vengeance == nil then
+            br.vengeance = {}
+        end
+        br.vengeance.groundOverride = {
+            [152364] = "Radiance of Azshara"
+        }
         
         local function iStrike(unit)
             --if getDistance("player",unit) < 40 then
@@ -219,7 +234,7 @@ local function runRotation()
                     wasMouseLooking = true
                     MouselookStop()
                 end
-                if getDistance("player",unit) <= 6 then
+                if getDistance("player",unit) <= 6 or br.vengeance.groundOverride[getUnitID(unit)] ~= nil then
                     if cast.infernalStrike("player","ground") then
                         iStrikeDelay = GetTime()
                         if wasMouseLooking then
@@ -271,6 +286,24 @@ local function runRotation()
             end
         end
 
+        local typesLoc = {
+            "Demon","Dämon","Démon","악마","Demonio","Demônio","Demonarca", "Demone", "Демон", "恶魔", "惡魔",
+            "Beast","Wildtier","Bête","야수","Bestia","Fera","Животное","野兽","野獸",
+            "Humanoid","Humanoid","Humanoide", "Humanoïde", "Umanoide", "Humanoide", "Гуманоид", "인간형",  "人型生物", "人型生物"
+        }
+
+        local function ShouldMitigate()
+            if UnitThreatSituation("player", "target") == 3 then
+                for i = 1, #br.activeMitigationList do
+                    local spell_id = Casting[i]
+                    if UnitCastingInfo("target") == GetSpellInfo(spell_id) then
+                        return true
+                    end
+                end
+            end
+            return false
+        end
+
 --------------------
 --- Action Lists ---
 --------------------
@@ -300,34 +333,41 @@ local function runRotation()
 	-- Action List - Defensive
 		local function actionList_Defensive()
 			if useDefensive() then
-        -- Soul Barrier
-                if isChecked("Soul Barrier") and inCombat and php < getOptionValue("Soul Barrier") then
-                    if cast.soulBarrier() then br.addonDebug("Casting Soul Barrier") return end
-                end
         -- Demon Spikes
-                -- demon_spikes
-                if isChecked("Demon Spikes") and inCombat and ((charges.demonSpikes.count() > getOptionValue("Hold Demon Spikes") and php <= getOptionValue("Demon Spikes")) or charges.demonSpikes.count() == 2) then
+                if isChecked("Demon Spikes") and inCombat and ((charges.demonSpikes.count() > getOptionValue("Hold Demon Spikes") and php <= getOptionValue("Demon Spikes")) or charges.demonSpikes.count() == 2) and #enemies.yards8 > 0 then
                     if not buff.demonSpikes.exists() and not debuff.fieryBrand.exists("target") and not buff.metamorphosis.exists() then
                         if cast.demonSpikes() then br.addonDebug("Casting Demon Spikes") return end
                     end
                 end
+        -- Null Barrier
+                if isChecked("Empowered Null Barrier") and inCombat and essence.empoweredNullBarrier.active and cd.empoweredNullBarrier.remain() <= gcd and php <= getOptionValue("Empowered Null Barrier") then
+                    if not buff.demonSpikes.exists() and not debuff.fieryBrand.exists("target") and not buff.metamorphosis.exists() then
+                        if cast.empoweredNullBarrier() then br.addonDebug("Casting Empowered Null Barrier") return end
+                    end
+                end
+        -- Fiery Brand
+                if isChecked("Fiery Brand") and inCombat and php <= getOptionValue("Fiery Brand") and #enemies.yards30 > 0 then
+                    if not buff.demonSpikes.exists() and not buff.metamorphosis.exists() then
+                        if cast.fieryBrand() then br.addonDebug("Casting Fiery Brand") return end
+                    end
+                end
         -- Metamorphosis
-				-- metamorphosis
 				if isChecked("Metamorphosis") and inCombat and not buff.demonSpikes.exists()
                     and not debuff.fieryBrand.exists("target") and not buff.metamorphosis.exists() and php <= getOptionValue("Metamorphosis")
                 then
 					if cast.metamorphosis() then br.addonDebug("Casting Metamorphosis") return end
 				end
-        -- Fiery Brand
-                -- fiery_brand
-                if isChecked("Fiery Brand") and inCombat and php <= getOptionValue("Fiery Brand") then
-                    if not buff.demonSpikes.exists() and not buff.metamorphosis.exists() then
-                        if cast.fieryBrand() then br.addonDebug("Casting Fiery Brand") return end
-                    end
-                end
         -- Anima of Death
-                if isChecked("Anima of Death") and essence.animaOfDeath.active and inCombat and #enemies.yards8 >= 3 and php <= getOptionValue("Anima of Death") then
+                if isChecked("Anima of Death") and essence.animaOfDeath.active and cd.animaOfDeath.remain() <= gcd and inCombat and #enemies.yards8 >= 3 and php <= getOptionValue("Anima of Death") then
                     if cast.animaOfDeath("player") then br.addonDebug("Casting Anima of Death") return end
+                end
+        -- Aegis of the Deep
+                if isChecked("Aegis of the Deep") and essence.aegisOfTheDeep.active and cd.aegisOfTheDeep.remain() <= gcd and inCombat and #enemies.yards8 >= 3 then
+                    if cast.aegisOfTheDeep("player") then br.addonDebug("Casting Aegis of the Deep") return end
+                end
+        -- Soul Barrier
+                if isChecked("Soul Barrier") and inCombat and php < getOptionValue("Soul Barrier") then
+                   if cast.soulBarrier() then br.addonDebug("Casting Soul Barrier") return end
                 end
 		-- Pot/Stoned
                 if isChecked("Pot/Stoned") and php <= getOptionValue("Pot/Stoned")
@@ -372,22 +412,28 @@ local function runRotation()
                     if canInterrupt(thisUnit,getOptionValue("Interrupt At")) then
                         if isChecked("Disrupt") and getDistance(thisUnit) < 20 then
                             if cast.disrupt(thisUnit) then br.addonDebug("Casting Disrupt") return end
-                        end
                         -- Sigil of Silence
-                        if isChecked("Sigil of Silence") and cd.disrupt.remain() > 0 then
+                        elseif isChecked("Sigil of Silence") then
                             if not talent.concentratedSigils then
                                 if cast.sigilOfSilence(thisUnit,"ground",1,8) then br.addonDebug("Casting Sigil of Silence") return end
                             elseif talent.concentratedSigils and getDistance(thisUnit) <= 8 then
                                 if cast.sigilOfSilence() then br.addonDebug("Casting Sigil of Silence") return end
                             end
-                        end
                         -- Sigil of Misery
-                        if isChecked("Sigil of Misery") and cd.disrupt.remain() > 0 and cd.sigilOfSilence.remain() > 0 and cd.sigilOfSilence.remain() < 45
-                        then
+                        elseif isChecked("Sigil of Misery") then
                             if not talent.concentratedSigils then
                                 if cast.sigilOfMisery(thisUnit,"ground",1,8) then br.addonDebug("Casting Sigil of Misery") return end
                             elseif talent.concentratedSigils and getDistance(thisUnit) <= 8 then
                                 if cast.sigilOfMisery() then br.addonDebug("Casting Sigil of Misery") return end
+                            end
+                        elseif isChecked("Imprison") then
+                            local type = UnitCreatureType(thisUnit)
+                            for i = 1, #typesLoc do
+                                if type == typesLoc[i] then
+                                    if getDistance(thisUnit) < 20 then
+                                        if cast.imprison(thisUnit) then br.addonDebug("Casting Imprison") return end
+                                    end
+                                end
                             end
                         end
                     end
@@ -418,20 +464,23 @@ local function runRotation()
                 if isChecked("Flask / Crystal") then
                     if inRaid and canFlask and flaskBuff==0 and not UnitBuffID("player",188033) then
                         useItem(br.player.flask.wod.agilityBig)
-                        return true
+                        return 
                     end
                     if flaskBuff==0 then
                         if not UnitBuffID("player",188033) and canUseItem(118922) then --Draenor Insanity Crystal
                             useItem(118922)
-                            return true
+                            return 
                         end
                         if not UnitBuffID("player",193456) and not UnitBuffID("player",188033) and canUseItem(129192) then -- Gaze of the Legion
                             useItem(129192)
-                            return true
+                            return 
                         end
                     end
                 end
                 if isChecked("Pre-Pull Timer") and pullTimer <= getOptionValue("Pre-Pull Timer") then
+                    if isChecked("Worldvein Resonance") and essence.worldveinResonance.active and cd.worldveinResonance.remain() <= gcd then
+                        if cast.worldveinResonance() then br.addonDebug("Casting Worldvein Resonance") return end
+                    end
                     if hasItem(166801) and canUseItem(166801) then
                         br.addonDebug("Using Sapphire of Brilliance")
                         useItem(166801)
@@ -449,12 +498,15 @@ local function runRotation()
             if isChecked("Sigil of Flame") and not isMoving(units.dyn5)
                 and getDistance(units.dyn5) < 5 and #enemies.yards5 > 0 and cd.fieryBrand.remain() < 2
             then
+                if br.vengeance.groundOverride[getUnitID("target")] ~= nil and getDistance("target") <= 8 then
+                    if cast.sigilOfFlame("player","ground") then br.addonDebug("Casting Sigil Of Flame") return end
+                end
                 if cast.sigilOfFlame("best",false,1,8) then br.addonDebug("Casting Sigil Of Flame") return end
 			end
 			-- actions.brand+=/infernal_strike,if=cooldown.fiery_brand.remains=0
 			if mode.mover == 1 and not cast.last.infernalStrike(1) and charges.infernalStrike.count() == 2 and not cd.fieryBrand.exists() and getDistance("target") <= 10 and C_LossOfControl.GetNumEvents() == 0 and GetTime() - iStrikeDelay > 2 then
                 --if cast.infernalStrike("targetGround","ground",1,6) then return end
-                if iStrike("target") then return true end
+                if iStrike("target") then return end
             end
 			-- actions.brand+=/fiery_brand (ignore if checked for defensive use)
             if cd.fieryBrand.remains() <= gcd then
@@ -472,14 +524,41 @@ local function runRotation()
 				-- actions.brand+=/infernal_strike,if=dot.fiery_brand.ticking
 				if mode.mover == 1 and not cast.last.infernalStrike(1) and charges.infernalStrike.count() == 2 and getDistance("target") <= 10 and C_LossOfControl.GetNumEvents() == 0 and GetTime() - iStrikeDelay > 2 then
                     --if cast.infernalStrike("player","ground",1,6) then return end
-                    if iStrike("target") then return true end
+                    if iStrike("target") then return end
 				end
 				-- actions.brand+=/sigil_of_flame,if=dot.fiery_brand.ticking
-				if isChecked("Sigil of Flame") and not isMoving(units.dyn5) and getDistance(units.dyn5) < 5 and #enemies.yards5 > 0 then
+                if isChecked("Sigil of Flame") and not isMoving(units.dyn5) and getDistance(units.dyn5) < 5 and #enemies.yards5 > 0 then
+                    if br.vengeance.groundOverride[getUnitID("target")] ~= nil and getDistance("target") <= 8 then
+                        if cast.sigilOfFlame("player","ground") then br.addonDebug("Casting Sigil Of Flame") return end
+                    end
 					if cast.sigilOfFlame("best",false,1,8) then br.addonDebug("Casting Sigil Of Flame") return end
 				end
             end
-        end -- End Action List - PreCombat
+        end -- End Action List - Fiery Brand
+
+        local function actionList_ActiveMitigation()
+            if ShouldMitigate() and #enemies.yards8 > 0 then
+                if isChecked("Trinket 1") and canTrinket(13) and not hasEquiped(169311,13) then  
+                    trinketLogic(13)
+                    return          
+                elseif isChecked("Trinket 2") and canTrinket(14) and not hasEquiped(169311,14) then            
+                    trinketLogic(14)
+                    return
+                    -- Metamorphosis
+				elseif isChecked("Metamorphosis") and not buff.demonSpikes.exists()
+                and not debuff.fieryBrand.exists("target") and not buff.metamorphosis.exists() then
+                    if cast.metamorphosis() then br.addonDebug("Casting Metamorphosis (Active Mitigation)") return end
+                -- Demon Spikes
+                elseif isChecked("Demon Spikes") and charges.demonSpikes.count() > 0 then
+                    if not buff.demonSpikes.exists() and not debuff.fieryBrand.exists("target") and not buff.metamorphosis.exists() then
+                        if cast.demonSpikes() then br.addonDebug("Casting Demon Spikes (Active Mitigation)") return end
+                    end
+                -- Soul Barrier
+                elseif isChecked("Soul Barrier") then
+                   if cast.soulBarrier() then br.addonDebug("Casting Soul Barrier (Active Mitigation)") return end
+                end
+            end
+        end
 ---------------------
 --- Begin Profile ---
 ---------------------
@@ -495,20 +574,16 @@ local function runRotation()
         else
             -- Infernal Strike
             if SpecificToggle("Infernal Strike Key") and not GetCurrentKeyBoardFocus() and isChecked("Infernal Strike Key") and GetTime() - iStrikeDelay > 2 then
-                CastSpellByName(GetSpellInfo(spell.infernalStrike),"cursor") iStrikeDelay = GetTime() return true 
+                CastSpellByName(GetSpellInfo(spell.infernalStrike),"cursor") iStrikeDelay = GetTime() return  
             end
             -- Sigil of Chains
-            if SpecificToggle("Sigil of Chains Key") and not GetCurrentKeyBoardFocus() and isChecked("Sigil of Chains Key") then
-                CastSpellByName(GetSpellInfo(spell.sigilOfChains),"cursor") return true 
+            if SpecificToggle("Sigil of Chains Key") and not GetCurrentKeyBoardFocus() and isChecked("Sigil of Chains Key") and cd.sigilOfChains.remain() <= gcd then
+                CastSpellByName(GetSpellInfo(spell.sigilOfChains),"cursor") return  
             end
 -----------------------
 --- Extras Rotation ---
 -----------------------
             if actionList_Extras() then return end
---------------------------
---- Defensive Rotation ---
---------------------------
-            if actionList_Defensive() then return end
 ------------------------------
 --- Out of Combat Rotation ---
 ------------------------------
@@ -516,13 +591,17 @@ local function runRotation()
 --------------------------
 --- In Combat Rotation ---
 --------------------------
-            if inCombat and isValidUnit("target")  then
+            if inCombat and isValidUnit("target") and getFacing("player","target") then
                 -- if br.timer:useTimer("facingdelay", 0.5) then
                 --     if not getFacing("player","target") then
                 --         FaceDirection(GetAnglesBetweenObjects ("player", "target"),true)
                 --     end
                 -- end
                 ChatOverlay("In-Combat!")
+    --------------------------
+    --- Defensive Rotation ---
+    --------------------------
+            if actionList_Defensive() then return end
     ------------------------------
     --- In Combat - Interrupts ---
     ------------------------------
@@ -550,7 +629,10 @@ local function runRotation()
 					if cast.felDevastation() then br.addonDebug("Casting Fel Devastation") return end
                 end
                 -- sigil_of_flame
-				if isChecked("Sigil of Flame") and not isMoving("target") and #enemies.yards5 > 0 then
+                if isChecked("Sigil of Flame") and not isMoving("target") and #enemies.yards5 > 0 then
+                    if br.vengeance.groundOverride[getUnitID("target")] ~= nil and getDistance("target") <= 8 then
+                        if cast.sigilOfFlame("player","ground") then br.addonDebug("Casting Sigil Of Flame") return end
+                    end
                     if cast.sigilOfFlame("best",false,1,8) then br.addonDebug("Casting Sigil Of Flame") return end
                 end
                 -- soul_cleave
@@ -574,7 +656,7 @@ local function runRotation()
                     if cast.soulCleave() then br.addonDebug("Casting Soul Cleave") return end
                 end
                 -- fracture
-				if talent.fracture and charges.fracture.frac() >= 1.75 then
+				if talent.fracture and charges.fracture.frac() >= 1.75 and #enemies.yards8 > 0 then
                     if cast.fracture() then br.addonDebug("Casting Fracture") return end
                 end
                 -- immolation_aura
@@ -586,7 +668,7 @@ local function runRotation()
                     if cast.soulCleave() then br.addonDebug("Casting Soul Cleave") return end
                 end
                 -- fracture
-				if talent.fracture and charges.fracture.count() >= 1 then
+				if talent.fracture and charges.fracture.count() >= 1 and #enemies.yards8 > 0 then
                     if cast.fracture() then br.addonDebug("Casting Fracture") return end
                 end
 				-- actions.normal+=/felblade,if=pain<=70
@@ -598,6 +680,10 @@ local function runRotation()
                     --if cast.infernalStrike("player","ground",1,6) then return end
                     if iStrike("target") then return true end
                 end
+                -- Worldvein Resonance
+                if isChecked("Worldvein Resonance") and essence.worldveinResonance.active and getSpellCD(295186) <= gcd and #enemies.yards5 > 0 then
+                    if cast.worldveinResonance() then br.addonDebug("Casting Worldvein Resonance") return end
+                end
                 -- Lucid Dreams
                 if isChecked("Lucid Dreams") and essence.memoryOfLucidDreams.active and getSpellCD(298357) <= gcd and #enemies.yards5 > 0 then
                     if cast.memoryOfLucidDreams("player") then br.addonDebug("Casting Memory of Lucid Dreams") return end
@@ -607,7 +693,7 @@ local function runRotation()
 	                if cast.shear() then br.addonDebug("Casting Shear") return end
                 end
 				-- actions.normal+=/throw_glaive
-                if isChecked("Throw Glaive") then
+                if isChecked("Throw Glaive") and #enemies.yards30 > 0 and #enemies.yards5 == 0 then
                     if cast.throwGlaive() then br.addonDebug("Casting Throw Glaive") return end
                 end
 			end --End In Combat

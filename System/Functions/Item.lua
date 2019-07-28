@@ -106,6 +106,12 @@ function useItemGround(Unit, itemID, maxDistance, minDistance, radius)
 	return false
 end
 function hasHealthPot()
+	local locale = GetLocale()
+	if locale == "koKR" or locale == "zhCN" or locale == "zhTW" then
+		if hasItem(169451) then
+			return true
+		end
+	end
 	local potion = br.player.potion
 	if potion.health == nil then
 		return false
@@ -117,6 +123,12 @@ function hasHealthPot()
 	end
 end
 function getHealthPot()
+	local locale = GetLocale()
+	if locale == "koKR" or locale == "zhCN" or locale == "zhTW" then
+		if hasItem(169451) then
+			return 169451
+		end
+	end
 	local potion = br.player.potion
 	if potion ~= nil then
 		if potion.health ~= nil then

@@ -126,7 +126,7 @@ interruptWhitelist = {
 	[253544] = true, -- bwonsamdismantle
 	[253517] = true, -- mending word
 	[256849] = true, -- dinomight
-    [250368] = true, -- noxious-stench
+    [259572] = true, -- noxious-stench
     [250096] = true, -- wracking-pain
     [255041] = true, -- terrifying-screech
     [279118] = true, -- unstable-hex
@@ -247,6 +247,18 @@ interruptWhitelist = {
 	[300436] = true, -- Grasping Hex, Scrapbone Shamans
 	[301629] = true, -- Enlarge, Mechagon Renormalizer
 	[284219] = true, -- Shrink, Mechagon Renormalizer
+	[301689] = true, -- Charged Coil, Anodized Coilbearer
+	[301088] = true, -- Detonate, Bomb Tonk
+	[293930] = true, -- Overclock, Mechagon Mechanic
+	[293729] = true, -- Tune Up, Mechagon Mechanic
+	-- Mechagon End
+	-- Eternal Palace Start
+	[296673] = true, -- Chain Lightning, Stormling
+	[295822] = true, -- Conductive Pulse, Azsh'ari Witch
+	[297972] = true, -- Chain Lightning, Aethanel, Tidemistress
+	[300491] = true, -- Drain Ancient Ward, Tidemistress
+	[300490] = true, -- Energize Ward of Power, Tidemistress
+	-- Eternal Palace End
 
 
 	-- Old Content start 
@@ -354,6 +366,21 @@ interruptWhitelist = {
 	[225562] = true, -- Blood Metamorphosis
 	[211875] = true, -- Bladestorm
 	-- Old Content end
+}
+
+activeMitigationList = {
+		--spell_id	, spell_name
+		{267899, "Hindering Cleave"}, -- Shrine of the Storm
+		{272457, "Shockwave"}, -- Underrot
+		{260508, "Crush"}, -- Waycrest Manor
+		{249919, "Skewer"}, -- Atal'Dazar
+		{265910, "Tail Thrash"}, -- King's Rest
+		{268586, "Blade Combo"}, -- King's Rest
+		{262277, "Terrible Thrash"}, -- Fetid Devourer
+		{265248, "Shatter"}, -- Zek'voz
+		{273316, "Bloody Cleave"}, -- Zul, Reborn
+		{273282, "Essence Shear"} -- Mythrax the Unraveler
+
 }
 -- Moved to threatBypassList (System/List/ThreatBypass.lua)
 -- validUnitBypassList = {
