@@ -173,6 +173,10 @@ local function createOptions()
 	}
 	return optionTable
 end
+
+local lastAutoAttackSent = GetTime()
+local autoAttackSpamInterval = 0.2 -- in seconds
+
 ----------------
 --- ROTATION ---
 ----------------
@@ -223,6 +227,8 @@ local function runRotation()
 	local traits = br.player.traits
 	local ttd = getTTD("target")
 	local units = br.player.units
+	local timeNow = GetTime()
+	local IsSpamAttackAllowed = not IsCurrentSpell(6603) and timeNow - lastAutoAttackSent > autoAttackSpamInterval
 
 	units.get(5)
 	units.get(10)
@@ -1034,7 +1040,7 @@ local function runRotation()
 			end
 		end
 		-- Avenger's Shield Aoe
-		if isChecked("Avenger's Shield") and cast.able.avengersShield() and (((charges.shieldOfTheRighteous.frac() > 2.5 and not buff.avengersValor.exists()) or #enemies.yards8 >= 2 or traits.bulwarkOfLight.rank > 1) and cd.avengersShield.remain() == 0) then
+		if isChecked("Avenger's Shield") and cast.able.avengersShield() and (((charges.shieldOfTheRighteous.frac() > 2.5 and not buff.avengersValor.exists()) or #enemies.yards8 >= 2 or traits.bulwarkOfLight.rank > 1)--[[ and cd.avengersShield.remain() == 0]]) then
 			if cast.avengersShield() then
 				return
 			end
@@ -1156,8 +1162,9 @@ local function runRotation()
 		--------------------------
 		if inCombat and (not IsMounted()) and profileStop == false then
 			--Start Attack
-			if getDistance(units.dyn5) < 5 then
-				StartAttack()
+			if getDistance(units.dyn5) < 5 and IsSpamAttackAllowed then
+				StartAttack(units.dyn5)
+				lastAutoAttackSent = timeNow
 			end
 			------------------------------
 			--- In Combat - Interrupts ---
