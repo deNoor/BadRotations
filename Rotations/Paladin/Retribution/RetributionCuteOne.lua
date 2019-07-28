@@ -738,7 +738,7 @@ local function runRotation()
                         if cast.crusaderStrike("target") then return end
                     end
         -- Start Attack
-                    if getDistance("target") < 5 and IsSpamAttackAllowed then StartAttack() end
+                    if getDistance("target") < 5 and IsSpamAttackAllowed then StartAttack("target") lastAutoAttackSent = timeNow end
                 end
             end
         end -- End Action List - PreCombat
@@ -906,6 +906,7 @@ local function runRotation()
                     -- auto_attack
                     if getDistance(units.dyn5) < 5 and IsSpamAttackAllowed then --and opener == true then
                         StartAttack(units.dyn5)
+                        lastAutoAttackSent = timeNow
                     end
             -- Action List - Interrupts
                     -- rebuke
