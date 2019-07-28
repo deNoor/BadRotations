@@ -397,6 +397,7 @@ function enemyListCheck(Unit)
 end
 
 function isValidUnit(Unit)
+	if not ObjectIsUnit(Unit) or UnitHealth(Unit) <= 1 then return false end
 	local hostileOnly = isChecked("Hostiles Only")
 	local playerTarget = GetUnitIsUnit(Unit, "target")
 	local reaction = GetUnitReaction(Unit, "player") or 10
@@ -406,7 +407,7 @@ function isValidUnit(Unit)
 	local burnUnit = getOptionCheck("Forced Burn") and isBurnTarget(Unit) > 0
 	local isCC = getOptionCheck("Don't break CCs") and isLongTimeCCed(Unit) or false
 	local mcCheck = (isChecked("Attack MC Targets") and	(not GetUnitIsFriend(Unit, "player") or (UnitIsCharmed(Unit) and UnitCanAttack("player", Unit)))) or not GetUnitIsFriend(Unit, "player")
-	if UnitHealth(Unit) <= 1 or (playerTarget and br.units[UnitTarget("player")] == nil and not enemyListCheck("target")) then
+	if (playerTarget and br.units[UnitTarget("player")] == nil and not enemyListCheck("target")) then
 		return false
 	end
 	if not pause(true) and Unit ~= nil and
