@@ -174,8 +174,145 @@ local function createOptions()
 	return optionTable
 end
 
+local StunsBlackList = {
+	-- Atal'Dazar
+	[87318] = "Dazar'ai Colossus",
+	[122984] = "Dazar'ai Colossus",
+	[128455] = "T'lonja",
+	[129553] = "Dinomancer Kish'o",
+	[129552] = "Monzumi",
+	-- Freehold
+	[129602] = "Irontide Enforcer",
+	[130400] = "Irontide Crusher",
+	-- King's Rest
+	[133935] = "Animated Guardian",
+	[134174] = "Shadow-Borne Witch Doctor",
+	[134158] = "Shadow-Borne Champion",
+	[137474] = "King Timalji",
+	[137478] = "Queen Wasi",
+	[137486] = "Queen Patlaa",
+	[137487] = "Skeletal Hunting Raptor",
+	[134251] = "Seneschal M'bara",
+	[134331] = "King Rahu'ai",
+	[137484] = "King A'akul",
+	[134739] = "Purification Construct",
+	[137969] = "Interment Construct",
+	[135231] = "Spectral Brute",
+	[138489] = "Shadow of Zul",
+	-- Shrine of the Storm
+	[134144] = "Living Current",
+	[136214] = "Windspeaker Heldis",
+	[134150] = "Runecarver Sorn",
+	[136249] = "Guardian Elemental",
+	[134417] = "Deepsea Ritualist",
+	[136353] = "Colossal Tentacle",
+	[136295] = "Sunken Denizen",
+	[136297] = "Forgotten Denizen",
+	-- Siege of Boralus
+	[129369] = "Irontide Raider",
+	[129373] = "Dockhound Packmaster",
+	[128969] = "Ashvane Commander",
+	[138255] = "Ashvane Spotter",
+	[138465] = "Ashvane Cannoneer",
+	[135245] = "Bilge Rat Demolisher",
+	-- Temple of Sethraliss
+	[134991] = "Sandfury Stonefist",
+	[139422] = "Scaled Krolusk Tamer",
+	[136076] = "Agitated Nimbus",
+	[134691] = "Static-charged Dervish",
+	[139110] = "Spark Channeler",
+	[136250] = "Hoodoo Hexer",
+	[139946] = "Heart Guardian",
+	-- MOTHERLODE!!
+	[130485] = "Mechanized Peacekeeper",
+	[136139] = "Mechanized Peacekeeper",
+	[136643] = "Azerite Extractor",
+	[134012] = "Taskmaster Askari",
+	[133430] = "Venture Co. Mastermind",
+	[133463] = "Venture Co. War Machine",
+	[133436] = "Venture Co. Skyscorcher",
+	[133482] = "Crawler Mine",
+	-- Underrot
+	[131436] = "Chosen Blood Matron",
+	[133912] = "Bloodsworn Defiler",
+	[138281] = "Faceless Corruptor",
+	-- Tol Dagor
+	[130025] = "Irontide Thug",
+	-- Waycrest Manor
+	[131677] = "Heartsbane Runeweaver",
+	[135329] = "Matron Bryndle",
+	[131812] = "Heartsbane Soulcharmer",
+	[131670] = "Heartsbane Vinetwister",
+	[135365] = "Matron Alma"
+}
+local HOJ_unitList = {
+	[131009] = "Spirit of Gold",
+	[134388] = "A Knot of Snakes",
+	[129758] = "Irontide Grenadier"
+}
+
+local HOJ_list = {
+	274400,
+	274383,
+	257756,
+	276292,
+	268273,
+	256897,
+	272542,
+	272888,
+	269266,
+	258317,
+	258864,
+	259711,
+	258917,
+	264038,
+	253239,
+	269931,
+	270084,
+	270482,
+	270506,
+	270507,
+	267433,
+	267354,
+	268702,
+	268846,
+	268865,
+	258908,
+	264574,
+	272659,
+	272655,
+	267237,
+	265568,
+	277567,
+	265540
+}
+
+local Debuff = {
+	--debuff_id
+	{255434},
+	{265881},
+	{264556},
+	{270487},
+	{274358},
+	{270447}
+}
+
+local Casting = {
+	--spell_id	, spell_name
+	{267899, "Hindering Cleave"}, -- Shrine of the Storm
+	{272457, "Shockwave"}, -- Underrot
+	{260508, "Crush"}, -- Waycrest Manor
+	{249919, "Skewer"}, -- Atal'Dazar
+	{265910, "Tail Thrash"}, -- King's Rest
+	{268586, "Blade Combo"}, -- King's Rest
+	{262277, "Terrible Thrash"}, -- Fetid Devourer
+	{265248, "Shatter"}, -- Zek'voz
+	{273316, "Bloody Cleave"}, -- Zul, Reborn
+	{273282, "Essence Shear"} -- Mythrax the Unraveler
+}
+
 local lastAutoAttackSent = GetTime()
-local autoAttackSpamInterval = 0.2 -- in seconds
+local autoAttackSpamInterval = 0.3 -- in seconds
 
 ----------------
 --- ROTATION ---
@@ -204,29 +341,30 @@ local function runRotation()
 	local cast = br.player.cast
 	local cd = br.player.cd
 	local charges = br.player.charges
-	local combatTime = getCombatTime()
 	local debuff = br.player.debuff
 	local enemies = br.player.enemies
 	local essence = br.player.essence
 	local gcd = br.player.gcd
-	local hastar = GetObjectExists("target")
-	local healPot = getHealthPot()
 	local inCombat = br.player.inCombat
 	local level = br.player.level
-	local inInstance = br.player.instance == "party"
-	local inRaid = br.player.instance == "raid"
-	local lowest = br.friend[1]
 	local mode = br.player.mode
 	local php = br.player.health
 	local race = br.player.race
-	local racial = br.player.getRacial()
-	local resable = UnitIsPlayer("target") and UnitIsDeadOrGhost("target") and GetUnitIsFriend("target", "player")
-	local solo = GetNumGroupMembers() == 0
 	local spell = br.player.spell
 	local talent = br.player.talent
 	local traits = br.player.traits
-	local ttd = getTTD("target")
 	local units = br.player.units
+
+	local combatTime = getCombatTime()
+	local hastar = GetObjectExists("target")
+	local healPot = getHealthPot()
+	local inInstance = br.player.instance == "party"
+	local inRaid = br.player.instance == "raid"
+	local lowest = br.friend[1]
+	local racial = br.player.getRacial()
+	local resable = UnitIsPlayer("target") and UnitIsDeadOrGhost("target") and GetUnitIsFriend("target", "player")
+	local solo = GetNumGroupMembers() == 0
+	local ttd = getTTD("target")
 	local timeNow = GetTime()
 	local IsSpamAttackAllowed = not IsCurrentSpell(6603) and timeNow - lastAutoAttackSent > autoAttackSpamInterval
 
@@ -271,82 +409,6 @@ local function runRotation()
 			lowestUnit = thisUnit
 		end
 	end
-	local StunsBlackList = {
-		-- Atal'Dazar
-		[87318] = "Dazar'ai Colossus",
-		[122984] = "Dazar'ai Colossus",
-		[128455] = "T'lonja",
-		[129553] = "Dinomancer Kish'o",
-		[129552] = "Monzumi",
-		-- Freehold
-		[129602] = "Irontide Enforcer",
-		[130400] = "Irontide Crusher",
-		-- King's Rest
-		[133935] = "Animated Guardian",
-		[134174] = "Shadow-Borne Witch Doctor",
-		[134158] = "Shadow-Borne Champion",
-		[137474] = "King Timalji",
-		[137478] = "Queen Wasi",
-		[137486] = "Queen Patlaa",
-		[137487] = "Skeletal Hunting Raptor",
-		[134251] = "Seneschal M'bara",
-		[134331] = "King Rahu'ai",
-		[137484] = "King A'akul",
-		[134739] = "Purification Construct",
-		[137969] = "Interment Construct",
-		[135231] = "Spectral Brute",
-		[138489] = "Shadow of Zul",
-		-- Shrine of the Storm
-		[134144] = "Living Current",
-		[136214] = "Windspeaker Heldis",
-		[134150] = "Runecarver Sorn",
-		[136249] = "Guardian Elemental",
-		[134417] = "Deepsea Ritualist",
-		[136353] = "Colossal Tentacle",
-		[136295] = "Sunken Denizen",
-		[136297] = "Forgotten Denizen",
-		-- Siege of Boralus
-		[129369] = "Irontide Raider",
-		[129373] = "Dockhound Packmaster",
-		[128969] = "Ashvane Commander",
-		[138255] = "Ashvane Spotter",
-		[138465] = "Ashvane Cannoneer",
-		[135245] = "Bilge Rat Demolisher",
-		-- Temple of Sethraliss
-		[134991] = "Sandfury Stonefist",
-		[139422] = "Scaled Krolusk Tamer",
-		[136076] = "Agitated Nimbus",
-		[134691] = "Static-charged Dervish",
-		[139110] = "Spark Channeler",
-		[136250] = "Hoodoo Hexer",
-		[139946] = "Heart Guardian",
-		-- MOTHERLODE!!
-		[130485] = "Mechanized Peacekeeper",
-		[136139] = "Mechanized Peacekeeper",
-		[136643] = "Azerite Extractor",
-		[134012] = "Taskmaster Askari",
-		[133430] = "Venture Co. Mastermind",
-		[133463] = "Venture Co. War Machine",
-		[133436] = "Venture Co. Skyscorcher",
-		[133482] = "Crawler Mine",
-		-- Underrot
-		[131436] = "Chosen Blood Matron",
-		[133912] = "Bloodsworn Defiler",
-		[138281] = "Faceless Corruptor",
-		-- Tol Dagor
-		[130025] = "Irontide Thug",
-		-- Waycrest Manor
-		[131677] = "Heartsbane Runeweaver",
-		[135329] = "Matron Bryndle",
-		[131812] = "Heartsbane Soulcharmer",
-		[131670] = "Heartsbane Vinetwister",
-		[135365] = "Matron Alma"
-	}
-	local HOJ_unitList = {
-		[131009] = "Spirit of Gold",
-		[134388] = "A Knot of Snakes",
-		[129758] = "Irontide Grenadier"
-	}
 	-- Auto cancel Blessing of Protection
 	if mode.cancelBop == 1 then
 		if buff.blessingOfProtection.exists() or buff.divineShield.exists() then
@@ -449,45 +511,10 @@ local function runRotation()
 		end
 		-- Hammer of Justice
 		if cast.able.hammerOfJustice() then
-			local HOJ_list = {
-				274400,
-				274383,
-				257756,
-				276292,
-				268273,
-				256897,
-				272542,
-				272888,
-				269266,
-				258317,
-				258864,
-				259711,
-				258917,
-				264038,
-				253239,
-				269931,
-				270084,
-				270482,
-				270506,
-				270507,
-				267433,
-				267354,
-				268702,
-				268846,
-				268865,
-				258908,
-				264574,
-				272659,
-				272655,
-				267237,
-				265568,
-				277567,
-				265540
-			}
 			for i = 1, #enemies.yards10 do
 				local thisUnit = enemies.yards10[i]
 				local distance = getDistance(thisUnit)
-				for k, v in pairs(HOJ_list) do
+				for _, v in ipairs(HOJ_list) do
 					if (HOJ_unitList[GetObjectID(thisUnit)] ~= nil or UnitCastingInfo(thisUnit) == GetSpellInfo(v) or UnitChannelInfo(thisUnit) == GetSpellInfo(v)) and getBuffRemain(thisUnit, 226510) == 0 and distance <= 10 then
 						if cast.hammerOfJustice(thisUnit) then
 							return
@@ -534,15 +561,6 @@ local function runRotation()
 			end
 		end
 		-- Shield of the Righteous
-		local Debuff = {
-			--debuff_id
-			{255434},
-			{265881},
-			{264556},
-			{270487},
-			{274358},
-			{270447}
-		}
 		for i = 1, #Debuff do
 			local debuff_id = Debuff[i]
 			if getDebuffRemain("player", debuff_id) > 1 and not buff.shieldOfTheRighteous.exists() then
@@ -551,19 +569,7 @@ local function runRotation()
 				end
 			end
 		end
-		local Casting = {
-			--spell_id	, spell_name
-			{267899, "Hindering Cleave"}, -- Shrine of the Storm
-			{272457, "Shockwave"}, -- Underrot
-			{260508, "Crush"}, -- Waycrest Manor
-			{249919, "Skewer"}, -- Atal'Dazar
-			{265910, "Tail Thrash"}, -- King's Rest
-			{268586, "Blade Combo"}, -- King's Rest
-			{262277, "Terrible Thrash"}, -- Fetid Devourer
-			{265248, "Shatter"}, -- Zek'voz
-			{273316, "Bloody Cleave"}, -- Zul, Reborn
-			{273282, "Essence Shear"} -- Mythrax the Unraveler
-		}
+
 		for i = 1, #Casting do
 			local spell_id = Casting[i][1]
 			local spell_name = Casting[i][2]
