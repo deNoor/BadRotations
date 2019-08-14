@@ -1168,10 +1168,7 @@ local function runRotation()
 		--------------------------
 		if inCombat and (not IsMounted()) and profileStop == false then
 			--Start Attack
-			if getDistance(units.dyn5) < 5 and IsSpamAttackAllowed then
-				StartAttack(units.dyn5)
-				lastAutoAttackSent = timeNow
-			end
+			if getDistance("target") < 5 and isValidUnit("target") and IsSpamAttackAllowed then StartAttack("target") lastAutoAttackSent = timeNow end
 			------------------------------
 			--- In Combat - Interrupts ---
 			------------------------------
